@@ -73,4 +73,23 @@ export const uploadImage = (file: File) => {
   )
 }
 
+// Tables
+export const getTables = (restaurantId: number) =>
+  api.get(`/restaurants/${restaurantId}/tables`)
+export const createTable = (restaurantId: number, data: { number: number; isActive?: boolean }) =>
+  api.post(`/restaurants/${restaurantId}/tables`, data)
+export const updateTable = (id: number, data: { number?: number; isActive?: boolean }) =>
+  api.put(`/tables/${id}`, data)
+export const deleteTable = (id: number) => api.delete(`/tables/${id}`)
+
+// Orders (Public)
+export const createOrder = (data: { tableId: number; items: { menuItemId: number; quantity: number }[] }) =>
+  api.post('/public/orders', data)
+
+// Orders (Admin)
+export const getOrders = (restaurantId: number) =>
+  api.get(`/admin/orders?restaurantId=${restaurantId}`)
+export const updateOrderStatus = (orderId: number, status: string, restaurantId: number) =>
+  api.put(`/admin/orders/${orderId}/status?restaurantId=${restaurantId}`, { status })
+
 export default api

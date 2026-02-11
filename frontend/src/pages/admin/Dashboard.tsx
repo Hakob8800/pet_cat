@@ -211,6 +211,12 @@ export default function Dashboard() {
                   {r.description && <p className="text-gray-600 mt-1">{r.description}</p>}
                 </div>
                 <div className="flex gap-2">
+                  <Link
+                    to={`/admin/restaurant/${r.id}/orders`}
+                    className="text-orange-600 hover:underline"
+                  >
+                    Orders
+                  </Link>
                   <button
                     onClick={() => setSelectedQR(selectedQR === r.slug ? null : r.slug)}
                     className="text-purple-600 hover:underline"

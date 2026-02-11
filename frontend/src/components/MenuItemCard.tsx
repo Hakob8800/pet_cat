@@ -1,11 +1,13 @@
 interface Props {
+  id: number
   name: string
   description?: string
   price: number
   imageUrl?: string
+  onAddToCart?: (item: { id: number; name: string; price: number }) => void
 }
 
-export default function MenuItemCard({ name, description, price, imageUrl }: Props) {
+export default function MenuItemCard({ id, name, description, price, imageUrl, onAddToCart }: Props) {
   return (
     <div className="flex gap-4 p-4 bg-white rounded-lg shadow">
       {imageUrl && (
@@ -24,6 +26,14 @@ export default function MenuItemCard({ name, description, price, imageUrl }: Pro
         </div>
         {description && (
           <p className="text-gray-600 mt-1 text-sm">{description}</p>
+        )}
+        {onAddToCart && (
+          <button
+            onClick={() => onAddToCart({ id, name, price })}
+            className="mt-2 bg-green-600 text-white px-4 py-1.5 rounded-full text-sm font-medium hover:bg-green-700 transition-colors"
+          >
+            + Add
+          </button>
         )}
       </div>
     </div>

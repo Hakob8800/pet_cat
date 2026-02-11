@@ -11,9 +11,10 @@ interface Item {
 interface Props {
   name: string
   items: Item[]
+  onAddToCart?: (item: { id: number; name: string; price: number }) => void
 }
 
-export default function CategorySection({ name, items }: Props) {
+export default function CategorySection({ name, items, onAddToCart }: Props) {
   if (items.length === 0) return null
 
   return (
@@ -23,10 +24,12 @@ export default function CategorySection({ name, items }: Props) {
         {items.map((item) => (
           <MenuItemCard
             key={item.id}
+            id={item.id}
             name={item.name}
             description={item.description}
             price={item.price}
             imageUrl={item.imageUrl}
+            onAddToCart={onAddToCart}
           />
         ))}
       </div>

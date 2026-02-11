@@ -6,6 +6,7 @@ import PublicMenu from './pages/PublicMenu'
 import Dashboard from './pages/admin/Dashboard'
 import RestaurantEdit from './pages/admin/RestaurantEdit'
 import MenuEdit from './pages/admin/MenuEdit'
+import Orders from './pages/admin/Orders'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/admin" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/admin/restaurant/:id" element={<ProtectedRoute><RestaurantEdit /></ProtectedRoute>} />
       <Route path="/admin/restaurant/:id/menu" element={<ProtectedRoute><MenuEdit /></ProtectedRoute>} />
+      <Route path="/admin/restaurant/:id/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
 
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/admin" replace />} />
