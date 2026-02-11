@@ -4,12 +4,14 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { getRestaurants, updateRestaurant } from '../../api/client'
 import { restaurantSchema, RestaurantFormData } from '../../lib/validations'
+import { slugify, getErrorMessage } from '../../lib/utils'
 import FormField from '../../components/FormField'
 
 export default function RestaurantEdit() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   const {
     register,
@@ -24,32 +26,56 @@ export default function RestaurantEdit() {
   const slug = watch('slug')
 
   useEffect(() => {
-    loadRestaurant()
-  }, [id])
+    if (!id) return
 
-  const loadRestaurant = async () => {
-    const res = await getRestaurants()
-    const restaurant = res.data.find((r: { id: number }) => r.id === Number(id))
-    if (restaurant) {
-      reset({
-        name: restaurant.name,
-        slug: restaurant.slug,
-        description: restaurant.description || '',
-      })
+    let cancelled = false
+
+    const loadRestaurant = async () => {
+      try {
+        const res = await getRestaurants()
+        const restaurant = res.data.find((r: { id: number }) => r.id === Number(id))
+        if (!cancelled && restaurant) {
+          reset({
+            name: restaurant.name,
+            slug: restaurant.slug,
+            description: restaurant.description || '',
+          })
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(getErrorMessage(err))
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
     }
-    setLoading(false)
-  }
+
+    loadRestaurant()
+
+    return () => {
+      cancelled = true
+    }
+  }, [id, reset])
 
   const onSubmit = async (data: RestaurantFormData) => {
-    await updateRestaurant(Number(id), {
-      name: data.name,
-      slug: data.slug,
-      description: data.description || '',
-    })
-    navigate('/admin')
+    try {
+      setError('')
+      await updateRestaurant(Number(id), {
+        name: data.name,
+        slug: data.slug,
+        description: data.description || '',
+      })
+      navigate('/admin')
+    } catch (err) {
+      setError(getErrorMessage(err))
+    }
   }
 
-  if (loading) return <div className="p-4">Loading...</div>
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -63,6 +89,10 @@ export default function RestaurantEdit() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6">
+        {error && (
+          <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>
+        )}
+
         <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-6 rounded-lg shadow">
           <div className="space-y-4">
             <FormField label="Name" error={errors.name}>
@@ -80,7 +110,7 @@ export default function RestaurantEdit() {
                 type="text"
                 {...register('slug', {
                   onChange: (e) => {
-                    e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                    e.target.value = slugify(e.target.value)
                   },
                 })}
                 className={`w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${

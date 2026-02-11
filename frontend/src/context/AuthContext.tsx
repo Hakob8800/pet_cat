@@ -9,6 +9,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null
+  loading: boolean
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, name: string) => Promise<void>
   logout: () => void
@@ -18,13 +19,22 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Restore user from localStorage on mount
-    const token = localStorage.getItem('token')
-    const savedUser = localStorage.getItem('user')
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser))
+    try {
+      const token = localStorage.getItem('token')
+      const savedUser = localStorage.getItem('user')
+      if (token && savedUser) {
+        setUser(JSON.parse(savedUser))
+      }
+    } catch {
+      // Invalid JSON in localStorage, clear it
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+    } finally {
+      setLoading(false)
     }
   }, [])
 
@@ -53,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )
