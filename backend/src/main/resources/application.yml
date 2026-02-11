@@ -10,10 +10,19 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
 
 jwt:
   secret: your-256-bit-secret-key-here-make-it-long-enough-for-hs256
   expiration: 86400000  # 24 hours in milliseconds
+
+file:
+  upload-dir: ./uploads
+  max-size: 5MB
+  allowed-types: image/jpeg,image/png,image/webp
 
 server:
   port: 8080

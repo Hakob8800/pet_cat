@@ -1,6 +1,7 @@
 package com.qrmenu.controller;
 
 import com.qrmenu.dto.CategoryDto;
+import com.qrmenu.dto.ReorderRequest;
 import com.qrmenu.entity.Category;
 import com.qrmenu.entity.Restaurant;
 import com.qrmenu.entity.User;
@@ -68,6 +69,26 @@ public class CategoryController {
         Category category = getOwnedCategory(id, user);
         categoryRepository.delete(category);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/api/restaurants/{restaurantId}/categories/reorder")
+    public ResponseEntity<Void> reorder(
+            @PathVariable Long restaurantId,
+            @RequestBody ReorderRequest request,
+            @AuthenticationPrincipal User user) {
+        restaurantService.getOwnedRestaurant(restaurantId, user);
+
+        for (ReorderRequest.ReorderItem item : request.items()) {
+            Category category = categoryRepository.findById(item.id())
+                    .orElseThrow(() -> new RuntimeException("Category not found"));
+            if (!category.getRestaurant().getId().equals(restaurantId)) {
+                throw new RuntimeException("Category does not belong to this restaurant");
+            }
+            category.setPosition(item.position());
+            categoryRepository.save(category);
+        }
+
+        return ResponseEntity.ok().build();
     }
 
     private Category getOwnedCategory(Long id, User user) {

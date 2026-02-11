@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '../../context/AuthContext'
 import { getRestaurants, createRestaurant, deleteRestaurant } from '../../api/client'
+import { restaurantSchema, RestaurantFormData } from '../../lib/validations'
 import QRCodeGenerator from '../../components/QRCodeGenerator'
 
 interface Restaurant {
@@ -16,10 +19,16 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [name, setName] = useState('')
-  const [slug, setSlug] = useState('')
-  const [description, setDescription] = useState('')
   const [selectedQR, setSelectedQR] = useState<string | null>(null)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<RestaurantFormData>({
+    resolver: zodResolver(restaurantSchema),
+  })
 
   useEffect(() => {
     loadRestaurants()
@@ -30,12 +39,13 @@ export default function Dashboard() {
     setRestaurants(res.data)
   }
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await createRestaurant({ name, slug, description })
-    setName('')
-    setSlug('')
-    setDescription('')
+  const onSubmit = async (data: RestaurantFormData) => {
+    await createRestaurant({
+      name: data.name,
+      slug: data.slug,
+      description: data.description || '',
+    })
+    reset()
     setShowForm(false)
     loadRestaurants()
   }
@@ -74,7 +84,10 @@ export default function Dashboard() {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-semibold">Your Restaurants</h2>
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              setShowForm(!showForm)
+              if (showForm) reset()
+            }}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
             {showForm ? 'Cancel' : 'Add Restaurant'}
@@ -83,37 +96,52 @@ export default function Dashboard() {
 
         {/* Create Form */}
         {showForm && (
-          <form onSubmit={handleCreate} className="bg-white p-4 rounded-lg shadow mb-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-4 rounded-lg shadow mb-6">
             <div className="grid gap-4 md:grid-cols-3">
-              <input
-                type="text"
-                placeholder="Restaurant Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="p-2 border rounded"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Slug (url-friendly)"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                className="p-2 border rounded"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Description (optional)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="p-2 border rounded"
-              />
+              <div>
+                <input
+                  type="text"
+                  placeholder="Restaurant Name"
+                  {...register('name')}
+                  className={`w-full p-2 border rounded ${errors.name ? 'border-red-500' : ''}`}
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>
+                )}
+              </div>
+              <div>
+                <input
+                  type="text"
+                  placeholder="Slug (url-friendly)"
+                  {...register('slug', {
+                    onChange: (e) => {
+                      e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                    },
+                  })}
+                  className={`w-full p-2 border rounded ${errors.slug ? 'border-red-500' : ''}`}
+                />
+                {errors.slug && (
+                  <p className="text-sm text-red-600 mt-1">{errors.slug.message}</p>
+                )}
+              </div>
+              <div>
+                <input
+                  type="text"
+                  placeholder="Description (optional)"
+                  {...register('description')}
+                  className={`w-full p-2 border rounded ${errors.description ? 'border-red-500' : ''}`}
+                />
+                {errors.description && (
+                  <p className="text-sm text-red-600 mt-1">{errors.description.message}</p>
+                )}
+              </div>
             </div>
             <button
               type="submit"
-              className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              disabled={isSubmitting}
+              className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
             >
-              Create
+              {isSubmitting ? 'Creating...' : 'Create'}
             </button>
           </form>
         )}

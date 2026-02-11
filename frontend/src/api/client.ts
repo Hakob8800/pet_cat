@@ -51,4 +51,26 @@ export const deleteItem = (id: number) => api.delete(`/items/${id}`)
 // Public Menu
 export const getPublicMenu = (slug: string) => api.get(`/menu/${slug}`)
 
+// Reorder
+export const reorderCategories = (restaurantId: number, items: { id: number; position: number }[]) =>
+  api.put(`/restaurants/${restaurantId}/categories/reorder`, { items })
+
+export const reorderItems = (categoryId: number, items: { id: number; position: number }[]) =>
+  api.put(`/categories/${categoryId}/items/reorder`, { items })
+
+// File Upload
+export const uploadImage = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post<{ filename: string; url: string; contentType: string; size: number }>(
+    '/files/upload',
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  )
+}
+
 export default api
