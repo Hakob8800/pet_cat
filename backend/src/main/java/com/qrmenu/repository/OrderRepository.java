@@ -1,0 +1,12 @@
+package com.qrmenu.repository;
+
+import com.qrmenu.entity.Order;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
+
+public interface OrderRepository extends JpaRepository<Order, Long> {
+    @Query("SELECT o FROM Order o JOIN FETCH o.table JOIN FETCH o.items i JOIN FETCH i.menuItem WHERE o.restaurant.id = :restaurantId ORDER BY o.createdAt DESC")
+    List<Order> findByRestaurantIdWithDetails(Long restaurantId);
+}
