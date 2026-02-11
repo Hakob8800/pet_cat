@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '../../context/AuthContext'
 import { getRestaurants, createRestaurant, deleteRestaurant } from '../../api/client'
 import { restaurantSchema, RestaurantFormData } from '../../lib/validations'
+import { slugify, getErrorMessage } from '../../lib/utils'
 import QRCodeGenerator from '../../components/QRCodeGenerator'
 
 interface Restaurant {
@@ -15,9 +16,11 @@ interface Restaurant {
 }
 
 export default function Dashboard() {
-  const { user, logout } = useAuth()
+  const { user, logout, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [selectedQR, setSelectedQR] = useState<string | null>(null)
 
@@ -30,30 +33,77 @@ export default function Dashboard() {
     resolver: zodResolver(restaurantSchema),
   })
 
-  useEffect(() => {
-    loadRestaurants()
+  const loadRestaurants = useCallback(async () => {
+    try {
+      setError('')
+      const res = await getRestaurants()
+      setRestaurants(res.data)
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  const loadRestaurants = async () => {
-    const res = await getRestaurants()
-    setRestaurants(res.data)
-  }
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      navigate('/login')
+      return
+    }
+
+    let cancelled = false
+
+    const load = async () => {
+      try {
+        setError('')
+        const res = await getRestaurants()
+        if (!cancelled) {
+          setRestaurants(res.data)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(getErrorMessage(err))
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    load()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user, authLoading, navigate])
 
   const onSubmit = async (data: RestaurantFormData) => {
-    await createRestaurant({
-      name: data.name,
-      slug: data.slug,
-      description: data.description || '',
-    })
-    reset()
-    setShowForm(false)
-    loadRestaurants()
+    try {
+      setError('')
+      await createRestaurant({
+        name: data.name,
+        slug: data.slug,
+        description: data.description || '',
+      })
+      reset()
+      setShowForm(false)
+      loadRestaurants()
+    } catch (err) {
+      setError(getErrorMessage(err))
+    }
   }
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this restaurant?')) return
-    await deleteRestaurant(id)
-    loadRestaurants()
+    try {
+      setError('')
+      await deleteRestaurant(id)
+      loadRestaurants()
+    } catch (err) {
+      setError(getErrorMessage(err))
+    }
   }
 
   const handleLogout = () => {
@@ -61,9 +111,12 @@ export default function Dashboard() {
     navigate('/login')
   }
 
+  if (authLoading || loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
       <header className="bg-white shadow">
         <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold">QR Menu Admin</h1>
@@ -80,7 +133,10 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6">
-        {/* Add Restaurant Button */}
+        {error && (
+          <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>
+        )}
+
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-semibold">Your Restaurants</h2>
           <button
@@ -94,7 +150,6 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Create Form */}
         {showForm && (
           <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-4 rounded-lg shadow mb-6">
             <div className="grid gap-4 md:grid-cols-3">
@@ -115,7 +170,7 @@ export default function Dashboard() {
                   placeholder="Slug (url-friendly)"
                   {...register('slug', {
                     onChange: (e) => {
-                      e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                      e.target.value = slugify(e.target.value)
                     },
                   })}
                   className={`w-full p-2 border rounded ${errors.slug ? 'border-red-500' : ''}`}
@@ -146,7 +201,6 @@ export default function Dashboard() {
           </form>
         )}
 
-        {/* Restaurant List */}
         <div className="space-y-4">
           {restaurants.map((r) => (
             <div key={r.id} className="bg-white p-4 rounded-lg shadow">

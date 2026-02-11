@@ -29,9 +29,8 @@ export const menuItemSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
   description: z.string().max(500, 'Description too long').optional(),
   price: z
-    .number({ invalid_type_error: 'Price is required' })
-    .positive('Price must be greater than 0')
-    .multipleOf(0.01, 'Price can have max 2 decimal places'),
+    .number({ error: 'Price is required' })
+    .positive('Price must be greater than 0'),
   imageUrl: z.string().optional(),
 })
 
