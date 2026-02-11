@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { getPublicMenu } from '../api/client'
 import CategorySection from '../components/CategorySection'
 import Cart from '../components/Cart'
 import { CartProvider, useCart } from '../context/CartContext'
-import api from '../api/client'
 
 interface MenuItem {
   id: number
@@ -20,11 +19,6 @@ interface Category {
   items: MenuItem[]
 }
 
-interface Table {
-  id: number
-  number: number
-}
-
 interface Menu {
   restaurantName: string
   description?: string
@@ -33,8 +27,10 @@ interface Menu {
 
 function PublicMenuContent() {
   const { slug } = useParams()
+  const [searchParams] = useSearchParams()
+  const tableId = searchParams.get('table') ? Number(searchParams.get('table')) : null
+
   const [menu, setMenu] = useState<Menu | null>(null)
-  const [tables, setTables] = useState<Table[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [orderSuccess, setOrderSuccess] = useState<number | null>(null)
@@ -43,24 +39,10 @@ function PublicMenuContent() {
   useEffect(() => {
     if (!slug) return
 
-    const fetchData = async () => {
-      try {
-        const menuRes = await getPublicMenu(slug)
-        setMenu(menuRes.data)
-
-        // Fetch tables for this restaurant (using public endpoint via menu data)
-        // We need to get tables - let's add a public tables endpoint or use restaurant id
-        // For MVP, we'll fetch tables from a public endpoint
-        const tablesRes = await api.get(`/public/tables/${slug}`)
-        setTables(tablesRes.data)
-      } catch {
-        setError('Menu not found')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
+    getPublicMenu(slug)
+      .then((res) => setMenu(res.data))
+      .catch(() => setError('Menu not found'))
+      .finally(() => setLoading(false))
   }, [slug])
 
   const handleAddToCart = (item: { id: number; name: string; price: number }) => {
@@ -116,6 +98,9 @@ function PublicMenuContent() {
           {menu.description && (
             <p className="text-gray-600 text-center mt-2">{menu.description}</p>
           )}
+          {tableId && (
+            <p className="text-center mt-2 text-sm text-blue-600">Table {tableId}</p>
+          )}
         </div>
       </header>
 
@@ -136,7 +121,7 @@ function PublicMenuContent() {
       </main>
 
       {/* Cart */}
-      <Cart tables={tables} onOrderSuccess={handleOrderSuccess} />
+      <Cart tableId={tableId} onOrderSuccess={handleOrderSuccess} />
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { QRCodeSVG } from 'qrcode.react'
 import { getRestaurants, updateRestaurant, getTables, createTable, updateTable, deleteTable } from '../../api/client'
 import { restaurantSchema, RestaurantFormData } from '../../lib/validations'
 import { slugify, getErrorMessage } from '../../lib/utils'
@@ -23,6 +24,7 @@ export default function RestaurantEdit() {
   const [tables, setTables] = useState<Table[]>([])
   const [newTableNumber, setNewTableNumber] = useState('')
   const [isAddingTable, setIsAddingTable] = useState(false)
+  const [selectedTableQR, setSelectedTableQR] = useState<number | null>(null)
 
   const {
     register,
@@ -137,6 +139,10 @@ export default function RestaurantEdit() {
     }
   }
 
+  const getTableUrl = (tableId: number) => {
+    return `${window.location.origin}/menu/${slug}?table=${tableId}`
+  }
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -240,44 +246,87 @@ export default function RestaurantEdit() {
           {tables.length === 0 ? (
             <p className="text-gray-500">No tables yet. Add tables so guests can place orders.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {tables.map((table) => (
-                <div
-                  key={table.id}
-                  className={`flex items-center justify-between p-3 rounded border ${
-                    table.isActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium">Table {table.number}</span>
-                    <span
-                      className={`text-xs px-2 py-1 rounded ${
-                        table.isActive
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-200 text-gray-600'
-                      }`}
-                    >
-                      {table.isActive ? 'Active' : 'Inactive'}
-                    </span>
+                <div key={table.id}>
+                  <div
+                    className={`flex items-center justify-between p-3 rounded border ${
+                      table.isActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium">Table {table.number}</span>
+                      <span
+                        className={`text-xs px-2 py-1 rounded ${
+                          table.isActive
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-200 text-gray-600'
+                        }`}
+                      >
+                        {table.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setSelectedTableQR(selectedTableQR === table.id ? null : table.id)}
+                        className="text-sm px-3 py-1 rounded bg-purple-100 text-purple-700 hover:bg-purple-200"
+                      >
+                        QR
+                      </button>
+                      <button
+                        onClick={() => handleToggleTable(table)}
+                        className={`text-sm px-3 py-1 rounded ${
+                          table.isActive
+                            ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
+                      >
+                        {table.isActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTable(table.id)}
+                        className="text-sm px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleToggleTable(table)}
-                      className={`text-sm px-3 py-1 rounded ${
-                        table.isActive
-                          ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                          : 'bg-green-100 text-green-700 hover:bg-green-200'
-                      }`}
-                    >
-                      {table.isActive ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteTable(table.id)}
-                      className="text-sm px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200"
-                    >
-                      Delete
-                    </button>
-                  </div>
+
+                  {/* QR Code */}
+                  {selectedTableQR === table.id && (
+                    <div className="mt-2 p-4 bg-white border rounded-lg flex flex-col items-center">
+                      <p className="text-sm font-medium mb-2">Table {table.number} QR Code</p>
+                      <QRCodeSVG value={getTableUrl(table.id)} size={180} />
+                      <p className="mt-2 text-xs text-gray-500 break-all text-center max-w-[200px]">
+                        {getTableUrl(table.id)}
+                      </p>
+                      <button
+                        onClick={() => {
+                          const canvas = document.createElement('canvas')
+                          const svg = document.querySelector(`[data-table-qr="${table.id}"]`)?.parentElement?.querySelector('svg')
+                          if (svg) {
+                            const svgData = new XMLSerializer().serializeToString(svg)
+                            const img = new Image()
+                            img.onload = () => {
+                              canvas.width = img.width
+                              canvas.height = img.height
+                              const ctx = canvas.getContext('2d')
+                              ctx?.drawImage(img, 0, 0)
+                              const link = document.createElement('a')
+                              link.download = `table-${table.number}-qr.png`
+                              link.href = canvas.toDataURL('image/png')
+                              link.click()
+                            }
+                            img.src = 'data:image/svg+xml;base64,' + btoa(svgData)
+                          }
+                        }}
+                        data-table-qr={table.id}
+                        className="mt-3 text-sm px-4 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      >
+                        Download PNG
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

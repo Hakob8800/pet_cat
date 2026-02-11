@@ -2,28 +2,22 @@ import { useState } from 'react'
 import { useCart } from '../context/CartContext'
 import { createOrder } from '../api/client'
 
-interface Table {
-  id: number
-  number: number
-}
-
 interface CartProps {
-  tables: Table[]
+  tableId: number | null
   onOrderSuccess: (orderId: number) => void
 }
 
-export default function Cart({ tables, onOrderSuccess }: CartProps) {
+export default function Cart({ tableId, onOrderSuccess }: CartProps) {
   const { items, totalItems, totalPrice, updateQuantity, removeItem, clearCart } = useCart()
   const [isOpen, setIsOpen] = useState(false)
-  const [selectedTable, setSelectedTable] = useState<number | ''>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   if (totalItems === 0) return null
 
   const handleSubmit = async () => {
-    if (!selectedTable) {
-      setError('Please select a table')
+    if (!tableId) {
+      setError('Table not specified. Please scan QR code on your table.')
       return
     }
 
@@ -32,7 +26,7 @@ export default function Cart({ tables, onOrderSuccess }: CartProps) {
 
     try {
       const response = await createOrder({
-        tableId: selectedTable,
+        tableId,
         items: items.map((item) => ({
           menuItemId: item.id,
           quantity: item.quantity,
@@ -75,6 +69,15 @@ export default function Cart({ tables, onOrderSuccess }: CartProps) {
               </button>
             </div>
 
+            {/* Table info */}
+            {tableId && (
+              <div className="px-4 pt-3">
+                <div className="bg-blue-50 text-blue-700 px-3 py-2 rounded text-sm">
+                  Table {tableId}
+                </div>
+              </div>
+            )}
+
             {/* Items */}
             <div className="p-4 space-y-3">
               {items.map((item) => (
@@ -108,24 +111,13 @@ export default function Cart({ tables, onOrderSuccess }: CartProps) {
               ))}
             </div>
 
-            {/* Table selection */}
-            <div className="px-4 pb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Select Table
-              </label>
-              <select
-                value={selectedTable}
-                onChange={(e) => setSelectedTable(Number(e.target.value) || '')}
-                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
-              >
-                <option value="">-- Select table --</option>
-                {tables.map((table) => (
-                  <option key={table.id} value={table.id}>
-                    Table {table.number}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!tableId && (
+              <div className="px-4 pb-2">
+                <div className="bg-yellow-50 text-yellow-700 px-3 py-2 rounded text-sm">
+                  Please scan QR code on your table to place an order.
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="px-4 pb-2">
@@ -141,7 +133,7 @@ export default function Cart({ tables, onOrderSuccess }: CartProps) {
               </div>
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !tableId}
                 className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
               >
                 {isSubmitting ? 'Placing Order...' : 'Place Order'}
