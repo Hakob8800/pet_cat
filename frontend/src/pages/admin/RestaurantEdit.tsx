@@ -1,14 +1,27 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { getRestaurants, updateRestaurant } from '../../api/client'
+import { restaurantSchema, RestaurantFormData } from '../../lib/validations'
+import FormField from '../../components/FormField'
 
 export default function RestaurantEdit() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [name, setName] = useState('')
-  const [slug, setSlug] = useState('')
-  const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(true)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<RestaurantFormData>({
+    resolver: zodResolver(restaurantSchema),
+  })
+
+  const slug = watch('slug')
 
   useEffect(() => {
     loadRestaurant()
@@ -18,16 +31,21 @@ export default function RestaurantEdit() {
     const res = await getRestaurants()
     const restaurant = res.data.find((r: { id: number }) => r.id === Number(id))
     if (restaurant) {
-      setName(restaurant.name)
-      setSlug(restaurant.slug)
-      setDescription(restaurant.description || '')
+      reset({
+        name: restaurant.name,
+        slug: restaurant.slug,
+        description: restaurant.description || '',
+      })
     }
     setLoading(false)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await updateRestaurant(Number(id), { name, slug, description })
+  const onSubmit = async (data: RestaurantFormData) => {
+    await updateRestaurant(Number(id), {
+      name: data.name,
+      slug: data.slug,
+      description: data.description || '',
+    })
     navigate('/admin')
   }
 
@@ -45,50 +63,50 @@ export default function RestaurantEdit() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6">
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow">
+        <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-6 rounded-lg shadow">
           <div className="space-y-4">
-            <div>
-              <label className="block text-gray-700 mb-2">Name</label>
+            <FormField label="Name" error={errors.name}>
               <input
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
+                {...register('name')}
+                className={`w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.name ? 'border-red-500' : ''
+                }`}
               />
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-gray-700 mb-2">Slug</label>
+            <FormField label="Slug" error={errors.slug} hint={`Menu URL: /menu/${slug || ''}`}>
               <input
                 type="text"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
+                {...register('slug', {
+                  onChange: (e) => {
+                    e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                  },
+                })}
+                className={`w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.slug ? 'border-red-500' : ''
+                }`}
               />
-              <p className="text-sm text-gray-500 mt-1">
-                Menu URL: /menu/{slug}
-              </p>
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-gray-700 mb-2">Description</label>
+            <FormField label="Description" error={errors.description}>
               <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                {...register('description')}
+                className={`w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.description ? 'border-red-500' : ''
+                }`}
                 rows={3}
               />
-            </div>
+            </FormField>
           </div>
 
           <div className="flex gap-4 mt-6">
             <button
               type="submit"
-              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+              disabled={isSubmitting}
+              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
             >
-              Save Changes
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>
             <Link
               to="/admin"

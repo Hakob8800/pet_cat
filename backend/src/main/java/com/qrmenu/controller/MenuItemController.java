@@ -1,6 +1,7 @@
 package com.qrmenu.controller;
 
 import com.qrmenu.dto.MenuItemDto;
+import com.qrmenu.dto.ReorderRequest;
 import com.qrmenu.entity.Category;
 import com.qrmenu.entity.MenuItem;
 import com.qrmenu.entity.User;
@@ -76,6 +77,26 @@ public class MenuItemController {
         MenuItem item = getOwnedItem(id, user);
         menuItemRepository.delete(item);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/api/categories/{categoryId}/items/reorder")
+    public ResponseEntity<Void> reorder(
+            @PathVariable Long categoryId,
+            @RequestBody ReorderRequest request,
+            @AuthenticationPrincipal User user) {
+        Category category = getOwnedCategory(categoryId, user);
+
+        for (ReorderRequest.ReorderItem item : request.items()) {
+            MenuItem menuItem = menuItemRepository.findById(item.id())
+                    .orElseThrow(() -> new RuntimeException("Item not found"));
+            if (!menuItem.getCategory().getId().equals(categoryId)) {
+                throw new RuntimeException("Item does not belong to this category");
+            }
+            menuItem.setPosition(item.position());
+            menuItemRepository.save(menuItem);
+        }
+
+        return ResponseEntity.ok().build();
     }
 
     private Category getOwnedCategory(Long id, User user) {
