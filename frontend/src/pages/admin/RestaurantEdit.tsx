@@ -1,17 +1,28 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { getRestaurants, updateRestaurant } from '../../api/client'
+import { getRestaurants, updateRestaurant, getTables, createTable, updateTable, deleteTable } from '../../api/client'
 import { restaurantSchema, RestaurantFormData } from '../../lib/validations'
 import { slugify, getErrorMessage } from '../../lib/utils'
 import FormField from '../../components/FormField'
+
+interface Table {
+  id: number
+  number: number
+  isActive: boolean
+}
 
 export default function RestaurantEdit() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Tables state
+  const [tables, setTables] = useState<Table[]>([])
+  const [newTableNumber, setNewTableNumber] = useState('')
+  const [isAddingTable, setIsAddingTable] = useState(false)
 
   const {
     register,
@@ -25,12 +36,22 @@ export default function RestaurantEdit() {
 
   const slug = watch('slug')
 
+  const loadTables = useCallback(async () => {
+    if (!id) return
+    try {
+      const res = await getTables(Number(id))
+      setTables(res.data)
+    } catch (err) {
+      console.error('Failed to load tables:', err)
+    }
+  }, [id])
+
   useEffect(() => {
     if (!id) return
 
     let cancelled = false
 
-    const loadRestaurant = async () => {
+    const loadData = async () => {
       try {
         const res = await getRestaurants()
         const restaurant = res.data.find((r: { id: number }) => r.id === Number(id))
@@ -40,6 +61,12 @@ export default function RestaurantEdit() {
             slug: restaurant.slug,
             description: restaurant.description || '',
           })
+        }
+
+        // Load tables
+        const tablesRes = await getTables(Number(id))
+        if (!cancelled) {
+          setTables(tablesRes.data)
         }
       } catch (err) {
         if (!cancelled) {
@@ -52,7 +79,7 @@ export default function RestaurantEdit() {
       }
     }
 
-    loadRestaurant()
+    loadData()
 
     return () => {
       cancelled = true
@@ -73,6 +100,43 @@ export default function RestaurantEdit() {
     }
   }
 
+  const handleAddTable = async () => {
+    if (!newTableNumber || !id) return
+
+    setIsAddingTable(true)
+    try {
+      setError('')
+      await createTable(Number(id), { number: Number(newTableNumber), isActive: true })
+      setNewTableNumber('')
+      loadTables()
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setIsAddingTable(false)
+    }
+  }
+
+  const handleToggleTable = async (table: Table) => {
+    try {
+      setError('')
+      await updateTable(table.id, { isActive: !table.isActive })
+      loadTables()
+    } catch (err) {
+      setError(getErrorMessage(err))
+    }
+  }
+
+  const handleDeleteTable = async (tableId: number) => {
+    if (!confirm('Delete this table?')) return
+    try {
+      setError('')
+      await deleteTable(tableId)
+      loadTables()
+    } catch (err) {
+      setError(getErrorMessage(err))
+    }
+  }
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
@@ -81,19 +145,21 @@ export default function RestaurantEdit() {
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
         <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold">Edit Restaurant</h1>
+          <h1 className="text-xl font-bold">Restaurant Settings</h1>
           <Link to="/admin" className="text-blue-600 hover:underline">
             Back to Dashboard
           </Link>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6">
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {error && (
-          <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>
+          <div className="bg-red-100 text-red-700 p-3 rounded">{error}</div>
         )}
 
+        {/* Restaurant Info */}
         <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-4">Restaurant Info</h2>
           <div className="space-y-4">
             <FormField label="Name" error={errors.name}>
               <input
@@ -146,6 +212,77 @@ export default function RestaurantEdit() {
             </Link>
           </div>
         </form>
+
+        {/* Tables Management */}
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-4">Tables</h2>
+
+          {/* Add Table Form */}
+          <div className="flex gap-2 mb-4">
+            <input
+              type="number"
+              min="1"
+              placeholder="Table number"
+              value={newTableNumber}
+              onChange={(e) => setNewTableNumber(e.target.value)}
+              className="flex-1 max-w-[200px] p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={handleAddTable}
+              disabled={isAddingTable || !newTableNumber}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+            >
+              {isAddingTable ? 'Adding...' : 'Add Table'}
+            </button>
+          </div>
+
+          {/* Tables List */}
+          {tables.length === 0 ? (
+            <p className="text-gray-500">No tables yet. Add tables so guests can place orders.</p>
+          ) : (
+            <div className="space-y-2">
+              {tables.map((table) => (
+                <div
+                  key={table.id}
+                  className={`flex items-center justify-between p-3 rounded border ${
+                    table.isActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium">Table {table.number}</span>
+                    <span
+                      className={`text-xs px-2 py-1 rounded ${
+                        table.isActive
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-200 text-gray-600'
+                      }`}
+                    >
+                      {table.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleToggleTable(table)}
+                      className={`text-sm px-3 py-1 rounded ${
+                        table.isActive
+                          ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                          : 'bg-green-100 text-green-700 hover:bg-green-200'
+                      }`}
+                    >
+                      {table.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTable(table.id)}
+                      className="text-sm px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   )
