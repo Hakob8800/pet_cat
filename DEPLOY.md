@@ -4,6 +4,7 @@
 - VPS with Docker and Docker Compose installed
 - Domain pointing to VPS IP
 - Ports 80 and 443 open
+- GitHub repository (for CI/CD)
 
 ## 1. Setup
 
@@ -95,6 +96,56 @@ Edit `frontend/src/api/client.ts`:
 const api = axios.create({
   baseURL: '/api',  // Relative URL works with nginx proxy
 })
+```
+
+## 7. CI/CD with GitHub Actions
+
+### Setup GitHub Secrets
+
+Go to repository **Settings → Secrets and variables → Actions**, add:
+
+| Secret | Description |
+|--------|-------------|
+| `VPS_HOST` | VPS IP address or domain |
+| `VPS_USER` | SSH username (e.g., `root` or `deploy`) |
+| `VPS_SSH_KEY` | Private SSH key for VPS access |
+
+### Workflows
+
+**CI (`.github/workflows/ci.yml`):**
+- Runs on every push and PR
+- Backend: Maven tests with PostgreSQL service
+- Frontend: TypeScript check + build
+- Docker: Build test (no push)
+
+**Deploy (`.github/workflows/deploy.yml`):**
+- Runs on push to `main` branch
+- Builds and pushes images to GitHub Container Registry
+- SSHs into VPS and pulls latest images
+- Restarts containers
+- Runs health check
+
+### Manual Trigger
+
+Deploy can be triggered manually:
+1. Go to **Actions** tab
+2. Select **Deploy** workflow
+3. Click **Run workflow**
+
+### First-time VPS Setup for CI/CD
+
+```bash
+# On VPS: Install Docker login for GHCR
+docker login ghcr.io -u YOUR_GITHUB_USERNAME
+
+# Clone repo (first time only)
+git clone https://github.com/YOUR_USERNAME/qrmenu /opt/qrmenu
+cd /opt/qrmenu
+cp .env.example .env
+nano .env
+
+# Use GHCR compose file
+docker compose -f docker-compose.ghcr.yml up -d
 ```
 
 ## Architecture
