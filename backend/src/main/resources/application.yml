@@ -24,5 +24,8 @@ file:
   max-size: 5MB
   allowed-types: image/jpeg,image/png,image/webp
 
+cors:
+  allowed-origins: http://localhost:*
+
 server:
   port: 8080
