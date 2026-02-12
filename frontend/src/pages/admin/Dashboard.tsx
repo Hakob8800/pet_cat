@@ -6,7 +6,6 @@ import { useAuth } from '../../context/AuthContext'
 import { getRestaurants, createRestaurant, deleteRestaurant } from '../../api/client'
 import { restaurantSchema, RestaurantFormData } from '../../lib/validations'
 import { slugify, getErrorMessage } from '../../lib/utils'
-import QRCodeGenerator from '../../components/QRCodeGenerator'
 
 interface Restaurant {
   id: number
@@ -22,7 +21,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const [selectedQR, setSelectedQR] = useState<string | null>(null)
 
   const {
     register,
@@ -217,23 +215,17 @@ export default function Dashboard() {
                   >
                     Orders
                   </Link>
-                  <button
-                    onClick={() => setSelectedQR(selectedQR === r.slug ? null : r.slug)}
-                    className="text-purple-600 hover:underline"
-                  >
-                    QR
-                  </button>
                   <Link
                     to={`/admin/restaurant/${r.id}/menu`}
                     className="text-blue-600 hover:underline"
                   >
-                    Edit Menu
+                    Menu
                   </Link>
                   <Link
                     to={`/admin/restaurant/${r.id}`}
-                    className="text-gray-600 hover:underline"
+                    className="text-purple-600 hover:underline"
                   >
-                    Settings
+                    Tables & QR
                   </Link>
                   <button
                     onClick={() => handleDelete(r.id)}
@@ -243,12 +235,6 @@ export default function Dashboard() {
                   </button>
                 </div>
               </div>
-
-              {selectedQR === r.slug && (
-                <div className="mt-4">
-                  <QRCodeGenerator slug={r.slug} />
-                </div>
-              )}
             </div>
           ))}
 
