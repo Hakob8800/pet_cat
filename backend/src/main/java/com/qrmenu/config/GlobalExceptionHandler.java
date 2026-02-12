@@ -30,6 +30,8 @@ public class GlobalExceptionHandler {
                 status = HttpStatus.CONFLICT;
             } else if (message.contains("Invalid credentials")) {
                 status = HttpStatus.UNAUTHORIZED;
+            } else if (message.contains("not active") || message.contains("not available") || message.contains("does not belong")) {
+                status = HttpStatus.BAD_REQUEST;
             }
         }
 
