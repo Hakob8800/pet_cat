@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getOrders, updateOrderStatus } from '../../api/client'
 import { getErrorMessage } from '../../lib/utils'
+import { useOrdersWebSocket } from '../../hooks/useOrdersWebSocket'
 
 interface OrderItem {
   id: number
@@ -38,18 +39,34 @@ export default function Orders() {
     }
   }, [restaurantId])
 
+  // WebSocket handler for real-time updates
+  const handleOrderUpdate = useCallback((updatedOrder: Order) => {
+    setOrders((prev) => {
+      const exists = prev.find((o) => o.id === updatedOrder.id)
+      if (exists) {
+        // Update existing order
+        return prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
+      }
+      // New order - add to beginning
+      return [updatedOrder, ...prev]
+    })
+  }, [])
+
+  // Connect to WebSocket for real-time updates
+  useOrdersWebSocket({
+    restaurantId: Number(restaurantId),
+    onOrderUpdate: handleOrderUpdate,
+  })
+
   useEffect(() => {
     loadOrders()
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(loadOrders, 30000)
-    return () => clearInterval(interval)
   }, [loadOrders])
 
   const handleMarkDone = async (orderId: number) => {
     if (!restaurantId) return
     try {
       await updateOrderStatus(orderId, 'DONE', Number(restaurantId))
-      loadOrders()
+      // WebSocket will handle the update automatically
     } catch (err) {
       setError(getErrorMessage(err))
     }

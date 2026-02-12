@@ -6,6 +6,7 @@ import com.qrmenu.repository.MenuItemRepository;
 import com.qrmenu.repository.OrderRepository;
 import com.qrmenu.repository.TableRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final TableRepository tableRepository;
     private final MenuItemRepository menuItemRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public CreateOrderResponse createOrder(CreateOrderRequest request) {
@@ -59,6 +61,13 @@ public class OrderService {
         // 4. Save
         order = orderRepository.save(order);
 
+        // 5. Broadcast via WebSocket
+        OrderDto orderDto = toDto(order);
+        messagingTemplate.convertAndSend(
+                "/topic/restaurants/" + restaurant.getId() + "/orders",
+                orderDto
+        );
+
         return new CreateOrderResponse(order.getId(), order.getStatus(), "Order created successfully");
     }
 
@@ -82,7 +91,14 @@ public class OrderService {
         order.setStatus(newStatus);
         order = orderRepository.save(order);
 
-        return toDto(order);
+        // Broadcast status update via WebSocket
+        OrderDto orderDto = toDto(order);
+        messagingTemplate.convertAndSend(
+                "/topic/restaurants/" + restaurantId + "/orders",
+                orderDto
+        );
+
+        return orderDto;
     }
 
     private OrderDto toDto(Order order) {

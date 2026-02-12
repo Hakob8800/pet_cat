@@ -40,6 +40,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // WebSocket endpoint
+                        .requestMatchers("/ws/**").permitAll()
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )
@@ -55,7 +57,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173")); // Vite default port
+        config.setAllowedOriginPatterns(List.of("http://localhost:*")); // Allow all localhost ports
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
