@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 interface UseNotificationsOptions {
   onPermissionGranted?: () => void
@@ -14,17 +14,46 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     return stored !== 'false'
   })
 
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
 
-  // Initialize audio
-  useEffect(() => {
-    // Create audio element with a simple beep sound (base64 encoded)
-    const audio = new Audio()
-    // Short notification sound (base64 WAV)
-    audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2LkZaYm5eUj4eCeHBpYmBhZGxydoGKkZebn5+dmZSNhHt0bmllZmltcnmAh46Tl5qamJWRjIV/eHJtaWdnaW1xd36Ei5GWmZqZl5OSjYiBe3Vwb3BwcHJ1eX6Dh42Sk5OUk5GQjouHhIB7d3Z1dXV2eHp9gYSIjI+Rk5OTkpGPjYqIhoSBfnt5eHh4eXt9f4KFiIuNkJGRkZCPjYuKiIaEgoB+fHt6enp7fH6AgoWHioyOj5CQj46NjIqJh4aEgoB/fn18fH19fn+BgoSGiImLjI2Njo2MjIuKiYiHhoWEg4KBgH9/f39/f4CBgoOEhYaHiImJiomJiYiIh4eGhoWFhIOCgoKBgYGBgoKCg4OEhIWFhYaGhoaGhoaGhYWFhYWEhISEg4ODg4OCgoKCgoKCgoKCgoKCgoKCgoKCgoKC'
-    audio.volume = 0.5
-    audioRef.current = audio
+  const getAudioContext = useCallback(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext()
+    }
+    return audioContextRef.current
   }, [])
+
+  // Play a bright, multi-tone chime (~2.5 seconds)
+  const playChime = useCallback(() => {
+    const ctx = getAudioContext()
+    if (ctx.state === 'suspended') {
+      ctx.resume()
+    }
+    const now = ctx.currentTime
+
+    const notes = [
+      { freq: 587.33, start: 0, dur: 0.3 },     // D5
+      { freq: 739.99, start: 0.25, dur: 0.3 },   // F#5
+      { freq: 880.00, start: 0.5, dur: 0.3 },     // A5
+      { freq: 1174.66, start: 0.75, dur: 0.5 },   // D6
+      { freq: 880.00, start: 1.3, dur: 0.3 },     // A5
+      { freq: 1174.66, start: 1.55, dur: 0.8 },   // D6 (long)
+    ]
+
+    notes.forEach(({ freq, start, dur }) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      gain.gain.setValueAtTime(0, now + start)
+      gain.gain.linearRampToValueAtTime(0.3, now + start + 0.05)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(now + start)
+      osc.stop(now + start + dur)
+    })
+  }, [getAudioContext])
 
   // Request permission
   const requestPermission = useCallback(async () => {
@@ -61,11 +90,8 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   const showNotification = useCallback(
     (title: string, body: string, onClick?: () => void) => {
       // Play sound if enabled
-      if (soundEnabled && audioRef.current) {
-        audioRef.current.currentTime = 0
-        audioRef.current.play().catch(() => {
-          // Ignore autoplay errors
-        })
+      if (soundEnabled) {
+        try { playChime() } catch { /* Ignore autoplay errors */ }
       }
 
       // Show browser notification if permitted
@@ -88,7 +114,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
         setTimeout(() => notification.close(), 10000)
       }
     },
-    [permission, soundEnabled]
+    [permission, soundEnabled, playChime]
   )
 
   // Toggle sound
@@ -102,11 +128,8 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
   // Play test sound
   const playTestSound = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0
-      audioRef.current.play().catch(() => {})
-    }
-  }, [])
+    try { playChime() } catch { /* Ignore errors */ }
+  }, [playChime])
 
   return {
     permission,
