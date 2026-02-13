@@ -7,12 +7,13 @@ import Dashboard from './pages/admin/Dashboard'
 import RestaurantEdit from './pages/admin/RestaurantEdit'
 import MenuEdit from './pages/admin/MenuEdit'
 import Orders from './pages/admin/Orders'
+import AdminNotifications from './components/AdminNotifications'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return null
   if (!user) return <Navigate to="/login" replace />
-  return <>{children}</>
+  return <AdminNotifications>{children}</AdminNotifications>
 }
 
 export default function App() {
