@@ -9,7 +9,8 @@ import MenuEdit from './pages/admin/MenuEdit'
 import Orders from './pages/admin/Orders'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  if (loading) return null
   if (!user) return <Navigate to="/login" replace />
   return <>{children}</>
 }
