@@ -9,16 +9,16 @@ interface Item {
 }
 
 interface Props {
+  categoryId: number
   name: string
   items: Item[]
-  onAddToCart?: (item: { id: number; name: string; price: number }) => void
 }
 
-export default function CategorySection({ name, items, onAddToCart }: Props) {
+export default function CategorySection({ categoryId, name, items }: Props) {
   if (items.length === 0) return null
 
   return (
-    <section className="mb-8">
+    <section id={`category-${categoryId}`} className="mb-8 scroll-mt-28">
       <h2 className="text-xl font-bold mb-4 pb-2 border-b">{name}</h2>
       <div className="space-y-3">
         {items.map((item) => (
@@ -29,7 +29,6 @@ export default function CategorySection({ name, items, onAddToCart }: Props) {
             description={item.description}
             price={item.price}
             imageUrl={item.imageUrl}
-            onAddToCart={onAddToCart}
           />
         ))}
       </div>

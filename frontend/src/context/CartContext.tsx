@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 
 export interface CartItem {
   id: number
@@ -19,10 +19,48 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | null>(null)
 
-export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
+function storageKey(slug: string) {
+  return `qrmenu_cart_${slug}`
+}
 
-  const addItem = (item: Omit<CartItem, 'quantity'>) => {
+function loadCart(slug: string): CartItem[] {
+  try {
+    const raw = localStorage.getItem(storageKey(slug))
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed
+  } catch {
+    // corrupted data — ignore
+  }
+  return []
+}
+
+function saveCart(slug: string, items: CartItem[]) {
+  try {
+    if (items.length === 0) {
+      localStorage.removeItem(storageKey(slug))
+    } else {
+      localStorage.setItem(storageKey(slug), JSON.stringify(items))
+    }
+  } catch {
+    // storage full or unavailable — ignore
+  }
+}
+
+interface CartProviderProps {
+  slug?: string
+  children: ReactNode
+}
+
+export function CartProvider({ slug, children }: CartProviderProps) {
+  const [items, setItems] = useState<CartItem[]>(() => (slug ? loadCart(slug) : []))
+
+  // Sync to localStorage whenever items change
+  useEffect(() => {
+    if (slug) saveCart(slug, items)
+  }, [slug, items])
+
+  const addItem = useCallback((item: Omit<CartItem, 'quantity'>) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.id === item.id)
       if (existing) {
@@ -32,23 +70,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, { ...item, quantity: 1 }]
     })
-  }
+  }, [])
 
-  const removeItem = (id: number) => {
+  const removeItem = useCallback((id: number) => {
     setItems((prev) => prev.filter((i) => i.id !== id))
-  }
+  }, [])
 
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity = useCallback((id: number, quantity: number) => {
     if (quantity <= 0) {
-      removeItem(id)
+      setItems((prev) => prev.filter((i) => i.id !== id))
       return
     }
     setItems((prev) =>
       prev.map((i) => (i.id === id ? { ...i, quantity } : i))
     )
-  }
+  }, [])
 
-  const clearCart = () => setItems([])
+  const clearCart = useCallback(() => {
+    setItems([])
+    if (slug) localStorage.removeItem(storageKey(slug))
+  }, [slug])
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0)
   const totalPrice = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
