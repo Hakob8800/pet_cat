@@ -50,6 +50,7 @@ export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const originalTitle = useRef(document.title)
 
@@ -137,14 +138,17 @@ export default function Orders() {
   }, [loadOrders])
 
   const handleAdvanceStatus = async (orderId: number, currentStatus: OrderStatusType) => {
-    if (!restaurantId || currentStatus === 'DONE') return
+    if (!restaurantId || currentStatus === 'DONE' || updatingOrderId) return
     const nextStatus = NEXT_STATUS[currentStatus]
     if (!nextStatus) return
+    setUpdatingOrderId(orderId)
     try {
       await updateOrderStatus(orderId, nextStatus, Number(restaurantId))
       // WebSocket will handle the update automatically
     } catch (err) {
       setError(getErrorMessage(err))
+    } finally {
+      setUpdatingOrderId(null)
     }
   }
 
@@ -324,9 +328,10 @@ export default function Orders() {
                       {action && (
                         <button
                           onClick={() => handleAdvanceStatus(order.id, order.status)}
-                          className={`text-white px-4 py-2 rounded transition-colors ${action.buttonClass}`}
+                          disabled={updatingOrderId === order.id}
+                          className={`text-white px-4 py-2 rounded transition-colors ${action.buttonClass} disabled:opacity-50`}
                         >
-                          {action.label}
+                          {updatingOrderId === order.id ? 'Updating...' : action.label}
                         </button>
                       )}
                     </div>
