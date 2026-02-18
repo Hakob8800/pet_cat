@@ -181,7 +181,9 @@ export default function MenuEdit() {
   const handleToggleAvailable = async (item: MenuItem) => {
     await updateItem(item.id, {
       name: item.name,
+      description: item.description,
       price: item.price,
+      imageUrl: item.imageUrl,
       available: !item.available
     })
     loadCategories()
