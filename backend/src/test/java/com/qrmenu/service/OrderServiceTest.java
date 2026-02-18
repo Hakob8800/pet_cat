@@ -93,12 +93,19 @@ class OrderServiceTest {
         CreateOrderResponse response = orderService.createOrder(request);
 
         assertThat(response.orderId()).isEqualTo(1L);
+        assertThat(response.restaurantId()).isEqualTo(1L);
         assertThat(response.status()).isEqualTo(OrderStatus.NEW);
         assertThat(response.message()).isEqualTo("Order created successfully");
 
-        // Verify WebSocket broadcast
+        // Verify WebSocket broadcast to restaurant topic
         verify(messagingTemplate).convertAndSend(
                 eq("/topic/restaurants/1/orders"),
+                any(OrderDto.class)
+        );
+
+        // Verify WebSocket broadcast to per-order topic
+        verify(messagingTemplate).convertAndSend(
+                eq("/topic/orders/1"),
                 any(OrderDto.class)
         );
     }
@@ -164,7 +171,7 @@ class OrderServiceTest {
     }
 
     @Test
-    void updateOrderStatus_Success() {
+    void updateOrderStatus_ValidTransition_Success() {
         Order order = new Order();
         order.setId(1L);
         order.setRestaurant(restaurant);
@@ -174,22 +181,43 @@ class OrderServiceTest {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenReturn(order);
 
-        OrderDto result = orderService.updateOrderStatus(1L, OrderStatus.DONE, 1L);
+        OrderDto result = orderService.updateOrderStatus(1L, OrderStatus.CONFIRMED, 1L);
 
-        assertThat(result.status()).isEqualTo(OrderStatus.DONE);
+        assertThat(result.status()).isEqualTo(OrderStatus.CONFIRMED);
 
-        // Verify WebSocket broadcast
+        // Verify WebSocket broadcast to restaurant topic
         verify(messagingTemplate).convertAndSend(
                 eq("/topic/restaurants/1/orders"),
                 any(OrderDto.class)
         );
+
+        // Verify WebSocket broadcast to per-order topic
+        verify(messagingTemplate).convertAndSend(
+                eq("/topic/orders/1"),
+                any(OrderDto.class)
+        );
+    }
+
+    @Test
+    void updateOrderStatus_InvalidTransition_ThrowsException() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setRestaurant(restaurant);
+        order.setTable(table);
+        order.setStatus(OrderStatus.NEW);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.updateOrderStatus(1L, OrderStatus.DONE, 1L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Invalid status transition: NEW -> DONE");
     }
 
     @Test
     void updateOrderStatus_OrderNotFound_ThrowsException() {
         when(orderRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> orderService.updateOrderStatus(999L, OrderStatus.DONE, 1L))
+        assertThatThrownBy(() -> orderService.updateOrderStatus(999L, OrderStatus.CONFIRMED, 1L))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Order not found");
     }
@@ -205,7 +233,7 @@ class OrderServiceTest {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
         // Try to update with different restaurant ID
-        assertThatThrownBy(() -> orderService.updateOrderStatus(1L, OrderStatus.DONE, 999L))
+        assertThatThrownBy(() -> orderService.updateOrderStatus(1L, OrderStatus.CONFIRMED, 999L))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Access denied");
     }
@@ -225,5 +253,31 @@ class OrderServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).id()).isEqualTo(1L);
         assertThat(result.get(0).tableNumber()).isEqualTo(1);
+    }
+
+    @Test
+    void getOrderStatus_Success() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setRestaurant(restaurant);
+        order.setTable(table);
+        order.setStatus(OrderStatus.PREPARING);
+
+        when(orderRepository.findByIdWithDetails(1L)).thenReturn(Optional.of(order));
+
+        OrderDto result = orderService.getOrderStatus(1L);
+
+        assertThat(result.id()).isEqualTo(1L);
+        assertThat(result.status()).isEqualTo(OrderStatus.PREPARING);
+        assertThat(result.tableNumber()).isEqualTo(1);
+    }
+
+    @Test
+    void getOrderStatus_NotFound_ThrowsException() {
+        when(orderRepository.findByIdWithDetails(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> orderService.getOrderStatus(999L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Order not found");
     }
 }

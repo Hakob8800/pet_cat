@@ -10,7 +10,7 @@ interface OrderItem {
   quantity: number
 }
 
-interface Order {
+export interface TrackedOrder {
   id: number
   tableNumber: number
   status: 'NEW' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DONE'
@@ -18,42 +18,40 @@ interface Order {
   items: OrderItem[]
 }
 
-interface UseOrdersWebSocketOptions {
-  restaurantId: number
-  onOrderUpdate: (order: Order) => void
+interface UseOrderTrackingWebSocketOptions {
+  orderId: number | null
+  onStatusUpdate: (order: TrackedOrder) => void
 }
 
 function getWsUrl() {
   return `${window.location.protocol === 'https:' ? 'https:' : 'http:'}//${window.location.host}/ws`
 }
 
-export function useOrdersWebSocket({ restaurantId, onOrderUpdate }: UseOrdersWebSocketOptions) {
+export function useOrderTrackingWebSocket({ orderId, onStatusUpdate }: UseOrderTrackingWebSocketOptions) {
   const clientRef = useRef<Client | null>(null)
 
   const connect = useCallback(() => {
+    if (!orderId) return
+
     const client = new Client({
       webSocketFactory: () => new SockJS(getWsUrl()),
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
-        console.log('WebSocket connected')
-        client.subscribe(`/topic/restaurants/${restaurantId}/orders`, (message) => {
-          const order: Order = JSON.parse(message.body)
-          onOrderUpdate(order)
+        client.subscribe(`/topic/orders/${orderId}`, (message) => {
+          const order: TrackedOrder = JSON.parse(message.body)
+          onStatusUpdate(order)
         })
       },
-      onDisconnect: () => {
-        console.log('WebSocket disconnected')
-      },
       onStompError: (frame) => {
-        console.error('STOMP error:', frame)
+        console.error('Order tracking STOMP error:', frame)
       },
     })
 
     client.activate()
     clientRef.current = client
-  }, [restaurantId, onOrderUpdate])
+  }, [orderId, onStatusUpdate])
 
   const disconnect = useCallback(() => {
     if (clientRef.current) {

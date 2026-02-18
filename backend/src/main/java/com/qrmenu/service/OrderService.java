@@ -68,7 +68,13 @@ public class OrderService {
                 orderDto
         );
 
-        return new CreateOrderResponse(order.getId(), order.getStatus(), "Order created successfully");
+        // 6. Broadcast to per-order topic for guest tracking
+        messagingTemplate.convertAndSend(
+                "/topic/orders/" + order.getId(),
+                orderDto
+        );
+
+        return new CreateOrderResponse(order.getId(), restaurant.getId(), order.getStatus(), "Order created successfully");
     }
 
     @Transactional(readOnly = true)
@@ -88,6 +94,11 @@ public class OrderService {
             throw new RuntimeException("Access denied");
         }
 
+        if (!order.getStatus().canTransitionTo(newStatus)) {
+            throw new IllegalArgumentException(
+                    "Invalid status transition: " + order.getStatus() + " -> " + newStatus);
+        }
+
         order.setStatus(newStatus);
         order = orderRepository.save(order);
 
@@ -97,8 +108,19 @@ public class OrderService {
                 "/topic/restaurants/" + restaurantId + "/orders",
                 orderDto
         );
+        messagingTemplate.convertAndSend(
+                "/topic/orders/" + orderId,
+                orderDto
+        );
 
         return orderDto;
+    }
+
+    @Transactional(readOnly = true)
+    public OrderDto getOrderStatus(Long orderId) {
+        Order order = orderRepository.findByIdWithDetails(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        return toDto(order);
     }
 
     private OrderDto toDto(Order order) {

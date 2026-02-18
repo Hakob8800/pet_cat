@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { getPublicMenu } from '../api/client'
 import CategorySection from '../components/CategorySection'
 import Cart from '../components/Cart'
+import OrderTracker from '../components/OrderTracker'
 import { CartProvider, useCart } from '../context/CartContext'
 
 interface MenuItem {
@@ -11,6 +12,7 @@ interface MenuItem {
   description?: string
   price: number
   imageUrl?: string
+  available?: boolean
 }
 
 interface Category {
@@ -29,6 +31,16 @@ interface OrderedItem {
   name: string
   quantity: number
   price: number
+}
+
+interface ActiveOrder {
+  orderId: number
+  restaurantId: number
+  items: OrderedItem[]
+}
+
+function getStorageKey(slug: string) {
+  return `qrmenu_active_order_${slug}`
 }
 
 // --- Skeleton components ---
@@ -168,10 +180,25 @@ function PublicMenuContent() {
   const [menu, setMenu] = useState<Menu | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [orderSuccess, setOrderSuccess] = useState<number | null>(null)
-  const [orderedItems, setOrderedItems] = useState<OrderedItem[]>([])
+  const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null)
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null)
   const { items: cartItems, clearCart } = useCart()
+
+  // Restore active order from localStorage on mount
+  useEffect(() => {
+    if (!slug) return
+    try {
+      const stored = localStorage.getItem(getStorageKey(slug))
+      if (stored) {
+        const parsed: ActiveOrder = JSON.parse(stored)
+        if (parsed.orderId) {
+          setActiveOrder(parsed)
+        }
+      }
+    } catch {
+      // ignore corrupt storage
+    }
+  }, [slug])
 
   useEffect(() => {
     if (!slug) return
@@ -216,11 +243,26 @@ function PublicMenuContent() {
     return () => observer.disconnect()
   }, [menu])
 
-  const handleOrderSuccess = useCallback((orderId: number) => {
-    // Capture what was ordered before clearing cart
-    setOrderedItems(cartItems.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })))
-    setOrderSuccess(orderId)
-  }, [cartItems])
+  const handleOrderSuccess = useCallback((orderId: number, restaurantId: number) => {
+    const ordered: OrderedItem[] = cartItems.map((i) => ({
+      name: i.name,
+      quantity: i.quantity,
+      price: i.price,
+    }))
+    const order: ActiveOrder = { orderId, restaurantId, items: ordered }
+    setActiveOrder(order)
+    if (slug) {
+      localStorage.setItem(getStorageKey(slug), JSON.stringify(order))
+    }
+  }, [cartItems, slug])
+
+  const handleOrderMore = useCallback(() => {
+    setActiveOrder(null)
+    clearCart()
+    if (slug) {
+      localStorage.removeItem(getStorageKey(slug))
+    }
+  }, [clearCart, slug])
 
   if (loading) {
     return <SkeletonMenu />
@@ -230,7 +272,7 @@ function PublicMenuContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center px-4">
-          <div className="text-5xl mb-4">😕</div>
+          <div className="text-5xl mb-4">:/</div>
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Menu Not Found</h2>
           <p className="text-gray-500">{error || 'This menu is not available.'}</p>
         </div>
@@ -238,59 +280,13 @@ function PublicMenuContent() {
     )
   }
 
-  if (orderSuccess) {
-    const orderTotal = orderedItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
+  if (activeOrder) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg w-full max-w-sm">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold mb-1">Order Placed!</h2>
-            <p className="text-gray-500 text-sm">Order #{orderSuccess}</p>
-          </div>
-
-          {/* Estimated wait */}
-          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-center">
-            <p className="text-amber-800 text-sm font-medium">Estimated wait: 15-25 min</p>
-          </div>
-
-          {/* Order summary */}
-          {orderedItems.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Your order</h3>
-              {orderedItems.map((item, i) => (
-                <div key={i} className="flex justify-between text-sm">
-                  <span className="text-gray-700">
-                    {item.quantity}x {item.name}
-                  </span>
-                  <span className="text-gray-500">
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-              <div className="flex justify-between font-semibold pt-2 border-t">
-                <span>Total</span>
-                <span>${orderTotal.toFixed(2)}</span>
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={() => {
-              setOrderSuccess(null)
-              setOrderedItems([])
-              clearCart()
-            }}
-            className="w-full mt-6 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 active:scale-[0.98] transition-all"
-          >
-            Order More
-          </button>
-        </div>
-      </div>
+      <OrderTracker
+        orderId={activeOrder.orderId}
+        initialItems={activeOrder.items}
+        onOrderMore={handleOrderMore}
+      />
     )
   }
 

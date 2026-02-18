@@ -19,6 +19,7 @@ public record PublicMenuDto(
             String name,
             String description,
             BigDecimal price,
-            String imageUrl
+            String imageUrl,
+            Boolean available
     ) {}
 }

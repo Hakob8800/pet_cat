@@ -4,7 +4,7 @@ import { createOrder } from '../api/client'
 
 interface CartProps {
   tableId: number | null
-  onOrderSuccess: (orderId: number) => void
+  onOrderSuccess: (orderId: number, restaurantId: number) => void
 }
 
 function formatPrice(price: number): string {
@@ -38,9 +38,10 @@ export default function Cart({ tableId, onOrderSuccess }: CartProps) {
       })
       clearCart()
       setIsOpen(false)
-      onOrderSuccess(response.data.orderId)
-    } catch {
-      setError('Failed to place order. Please try again.')
+      onOrderSuccess(response.data.orderId, response.data.restaurantId)
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } }
+      setError(axiosErr?.response?.data?.message || 'Failed to place order. Please try again.')
     } finally {
       setIsSubmitting(false)
     }

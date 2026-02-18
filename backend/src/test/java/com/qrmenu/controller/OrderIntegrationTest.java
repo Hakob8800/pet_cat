@@ -130,6 +130,7 @@ class OrderIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId").isNumber())
+                .andExpect(jsonPath("$.restaurantId").value(restaurant.getId()))
                 .andExpect(jsonPath("$.status").value("NEW"))
                 .andExpect(jsonPath("$.message").value("Order created successfully"));
 
@@ -183,7 +184,7 @@ class OrderIntegrationTest {
     }
 
     @Test
-    void updateOrderStatus_Success() throws Exception {
+    void updateOrderStatus_StepByStep_Success() throws Exception {
         // Create an order first
         CreateOrderRequest createRequest = new CreateOrderRequest(
                 table.getId(),
@@ -199,18 +200,74 @@ class OrderIntegrationTest {
         String responseBody = result.getResponse().getContentAsString();
         Long orderId = objectMapper.readTree(responseBody).get("orderId").asLong();
 
-        // Update status
+        // Step through each status transition: NEW -> CONFIRMED -> PREPARING -> READY -> DONE
+        String[] statuses = {"CONFIRMED", "PREPARING", "READY", "DONE"};
+        for (String status : statuses) {
+            mockMvc.perform(put("/api/admin/orders/" + orderId + "/status")
+                            .header("Authorization", "Bearer " + authToken)
+                            .param("restaurantId", restaurant.getId().toString())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"status\":\"" + status + "\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value(status));
+        }
+
+        // Verify final status in database
+        Order updatedOrder = orderRepository.findById(orderId).orElseThrow();
+        assertThat(updatedOrder.getStatus()).isEqualTo(OrderStatus.DONE);
+    }
+
+    @Test
+    void updateOrderStatus_InvalidTransition_Returns400() throws Exception {
+        // Create an order first
+        CreateOrderRequest createRequest = new CreateOrderRequest(
+                table.getId(),
+                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 1))
+        );
+
+        MvcResult result = mockMvc.perform(post("/api/public/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String responseBody = result.getResponse().getContentAsString();
+        Long orderId = objectMapper.readTree(responseBody).get("orderId").asLong();
+
+        // Try to skip from NEW directly to DONE
         mockMvc.perform(put("/api/admin/orders/" + orderId + "/status")
                         .header("Authorization", "Bearer " + authToken)
                         .param("restaurantId", restaurant.getId().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"status\":\"DONE\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("DONE"));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid status transition: NEW -> DONE"));
+    }
 
-        // Verify in database
-        Order updatedOrder = orderRepository.findById(orderId).orElseThrow();
-        assertThat(updatedOrder.getStatus()).isEqualTo(OrderStatus.DONE);
+    @Test
+    void getPublicOrderStatus_Success() throws Exception {
+        // Create an order first
+        CreateOrderRequest createRequest = new CreateOrderRequest(
+                table.getId(),
+                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 1))
+        );
+
+        MvcResult result = mockMvc.perform(post("/api/public/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String responseBody = result.getResponse().getContentAsString();
+        Long orderId = objectMapper.readTree(responseBody).get("orderId").asLong();
+
+        // Fetch order status publicly
+        mockMvc.perform(get("/api/public/orders/" + orderId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(orderId))
+                .andExpect(jsonPath("$.status").value("NEW"))
+                .andExpect(jsonPath("$.tableNumber").value(1))
+                .andExpect(jsonPath("$.items[0].menuItemName").value("Burger"));
     }
 
     @Test

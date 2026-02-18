@@ -5,6 +5,8 @@ import { getErrorMessage } from '../../lib/utils'
 import { useOrdersWebSocket } from '../../hooks/useOrdersWebSocket'
 import { useNotifications } from '../../hooks/useNotifications'
 
+type OrderStatusType = 'NEW' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DONE'
+
 interface OrderItem {
   id: number
   menuItemId: number
@@ -16,9 +18,31 @@ interface OrderItem {
 interface Order {
   id: number
   tableNumber: number
-  status: 'NEW' | 'DONE'
+  status: OrderStatusType
   createdAt: string
   items: OrderItem[]
+}
+
+const STATUS_CONFIG: Record<OrderStatusType, { label: string; color: string; border: string; bg: string }> = {
+  NEW: { label: 'New', color: 'bg-yellow-100 text-yellow-800', border: 'border-yellow-500', bg: 'bg-yellow-50' },
+  CONFIRMED: { label: 'Confirmed', color: 'bg-blue-100 text-blue-800', border: 'border-blue-500', bg: 'bg-blue-50' },
+  PREPARING: { label: 'Preparing', color: 'bg-orange-100 text-orange-800', border: 'border-orange-500', bg: 'bg-orange-50' },
+  READY: { label: 'Ready', color: 'bg-green-100 text-green-800', border: 'border-green-500', bg: 'bg-green-50' },
+  DONE: { label: 'Done', color: 'bg-gray-100 text-gray-600', border: 'border-gray-300', bg: 'bg-gray-50' },
+}
+
+const NEXT_ACTION: Record<string, { label: string; buttonClass: string }> = {
+  NEW: { label: 'Confirm', buttonClass: 'bg-blue-600 hover:bg-blue-700' },
+  CONFIRMED: { label: 'Start Preparing', buttonClass: 'bg-orange-600 hover:bg-orange-700' },
+  PREPARING: { label: 'Mark Ready', buttonClass: 'bg-green-600 hover:bg-green-700' },
+  READY: { label: 'Mark Done', buttonClass: 'bg-gray-600 hover:bg-gray-700' },
+}
+
+const NEXT_STATUS: Record<string, OrderStatusType> = {
+  NEW: 'CONFIRMED',
+  CONFIRMED: 'PREPARING',
+  PREPARING: 'READY',
+  READY: 'DONE',
 }
 
 export default function Orders() {
@@ -45,10 +69,10 @@ export default function Orders() {
     }
   }, [permission, requestPermission])
 
-  // Update page title with new order count
-  const updatePageTitle = useCallback((newOrderCount: number) => {
-    if (newOrderCount > 0) {
-      document.title = `(${newOrderCount}) New Orders - QR Menu`
+  // Update page title with active order count
+  const updatePageTitle = useCallback((activeCount: number) => {
+    if (activeCount > 0) {
+      document.title = `(${activeCount}) Active Orders - QR Menu`
     } else {
       document.title = originalTitle.current
     }
@@ -67,8 +91,8 @@ export default function Orders() {
       setError('')
       const res = await getOrders(Number(restaurantId))
       setOrders(res.data)
-      const newCount = res.data.filter((o: Order) => o.status === 'NEW').length
-      updatePageTitle(newCount)
+      const activeCount = res.data.filter((o: Order) => o.status !== 'DONE').length
+      updatePageTitle(activeCount)
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
@@ -83,8 +107,8 @@ export default function Orders() {
       if (exists) {
         // Update existing order
         const updated = prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
-        const newCount = updated.filter((o) => o.status === 'NEW').length
-        updatePageTitle(newCount)
+        const activeCount = updated.filter((o) => o.status !== 'DONE').length
+        updatePageTitle(activeCount)
         return updated
       }
       // New order - add to beginning and notify
@@ -96,8 +120,8 @@ export default function Orders() {
         )
       }
       const updated = [updatedOrder, ...prev]
-      const newCount = updated.filter((o) => o.status === 'NEW').length
-      updatePageTitle(newCount)
+      const activeCount = updated.filter((o) => o.status !== 'DONE').length
+      updatePageTitle(activeCount)
       return updated
     })
   }, [showNotification, updatePageTitle])
@@ -112,10 +136,12 @@ export default function Orders() {
     loadOrders()
   }, [loadOrders])
 
-  const handleMarkDone = async (orderId: number) => {
-    if (!restaurantId) return
+  const handleAdvanceStatus = async (orderId: number, currentStatus: OrderStatusType) => {
+    if (!restaurantId || currentStatus === 'DONE') return
+    const nextStatus = NEXT_STATUS[currentStatus]
+    if (!nextStatus) return
     try {
-      await updateOrderStatus(orderId, 'DONE', Number(restaurantId))
+      await updateOrderStatus(orderId, nextStatus, Number(restaurantId))
       // WebSocket will handle the update automatically
     } catch (err) {
       setError(getErrorMessage(err))
@@ -136,7 +162,7 @@ export default function Orders() {
     return date.toLocaleDateString()
   }
 
-  const newOrders = orders.filter((o) => o.status === 'NEW')
+  const activeOrders = orders.filter((o) => o.status !== 'DONE')
   const doneOrders = orders.filter((o) => o.status === 'DONE')
 
   if (loading) {
@@ -147,7 +173,14 @@ export default function Orders() {
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
         <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold">Orders</h1>
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            Orders
+            {activeOrders.length > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                {activeOrders.length}
+              </span>
+            )}
+          </h1>
           <div className="flex items-center gap-4">
             {/* Notification Settings */}
             <div className="relative">
@@ -235,60 +268,71 @@ export default function Orders() {
           <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>
         )}
 
-        {/* New Orders */}
+        {/* Active Orders */}
         <section className="mb-8">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <span className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></span>
-            New Orders ({newOrders.length})
+            Active Orders ({activeOrders.length})
           </h2>
 
-          {newOrders.length === 0 ? (
-            <p className="text-gray-500 bg-white p-4 rounded-lg">No new orders</p>
+          {activeOrders.length === 0 ? (
+            <p className="text-gray-500 bg-white p-4 rounded-lg">No active orders</p>
           ) : (
             <div className="space-y-4">
-              {newOrders.map((order) => (
-                <div key={order.id} className="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <span className="text-lg font-bold">Table {order.tableNumber}</span>
-                      <span className="text-gray-500 ml-3">#{order.id}</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-500">{formatDate(order.createdAt)}</div>
-                      <div className="font-medium">{formatTime(order.createdAt)}</div>
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-3 mb-3">
-                    {order.items.map((item) => (
-                      <div key={item.id} className="flex justify-between py-1">
-                        <span>
-                          <span className="font-medium">{item.quantity}x</span>{' '}
-                          {item.menuItemName}
-                        </span>
-                        <span className="text-gray-600">
-                          ${(item.price * item.quantity).toFixed(2)}
+              {activeOrders.map((order) => {
+                const config = STATUS_CONFIG[order.status]
+                const action = NEXT_ACTION[order.status]
+                return (
+                  <div key={order.id} className={`bg-white p-4 rounded-lg shadow border-l-4 ${config.border}`}>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <span className="text-lg font-bold">Table {order.tableNumber}</span>
+                          <span className="text-gray-500 ml-3">#{order.id}</span>
+                        </div>
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${config.color}`}>
+                          {config.label}
                         </span>
                       </div>
-                    ))}
-                  </div>
-
-                  <div className="flex justify-between items-center border-t pt-3">
-                    <div className="font-bold">
-                      Total: $
-                      {order.items
-                        .reduce((sum, item) => sum + item.price * item.quantity, 0)
-                        .toFixed(2)}
+                      <div className="text-right">
+                        <div className="text-sm text-gray-500">{formatDate(order.createdAt)}</div>
+                        <div className="font-medium">{formatTime(order.createdAt)}</div>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => handleMarkDone(order.id)}
-                      className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
-                    >
-                      Mark as Done
-                    </button>
+
+                    <div className="border-t pt-3 mb-3">
+                      {order.items.map((item) => (
+                        <div key={item.id} className="flex justify-between py-1">
+                          <span>
+                            <span className="font-medium">{item.quantity}x</span>{' '}
+                            {item.menuItemName}
+                          </span>
+                          <span className="text-gray-600">
+                            ${(item.price * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-between items-center border-t pt-3">
+                      <div className="font-bold">
+                        Total: $
+                        {order.items
+                          .reduce((sum, item) => sum + item.price * item.quantity, 0)
+                          .toFixed(2)}
+                      </div>
+                      {action && (
+                        <button
+                          onClick={() => handleAdvanceStatus(order.id, order.status)}
+                          className={`text-white px-4 py-2 rounded transition-colors ${action.buttonClass}`}
+                        >
+                          {action.label}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </section>

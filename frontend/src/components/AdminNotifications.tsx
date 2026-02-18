@@ -15,7 +15,7 @@ interface OrderItem {
 interface Order {
   id: number
   tableNumber: number
-  status: 'NEW' | 'DONE'
+  status: 'NEW' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DONE'
   createdAt: string
   items: OrderItem[]
 }
@@ -49,7 +49,7 @@ export default function AdminNotifications({ children }: { children: React.React
     if (restaurants.length === 0) return
 
     const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+      webSocketFactory: () => new SockJS(`${window.location.protocol === 'https:' ? 'https:' : 'http:'}//${window.location.host}/ws`),
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,

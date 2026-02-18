@@ -26,13 +26,19 @@ public class PublicMenuController {
                         category.getId(),
                         category.getName(),
                         category.getItems().stream()
-                                .filter(item -> Boolean.TRUE.equals(item.getAvailable()))
+                                .sorted((a, b) -> {
+                                    boolean aAvail = Boolean.TRUE.equals(a.getAvailable());
+                                    boolean bAvail = Boolean.TRUE.equals(b.getAvailable());
+                                    if (aAvail != bAvail) return aAvail ? -1 : 1;
+                                    return 0;
+                                })
                                 .map(item -> new PublicMenuDto.Item(
                                         item.getId(),
                                         item.getName(),
                                         item.getDescription(),
                                         item.getPrice(),
-                                        item.getImageUrl()
+                                        item.getImageUrl(),
+                                        item.getAvailable()
                                 ))
                                 .toList()
                 ))

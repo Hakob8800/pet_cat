@@ -85,6 +85,8 @@ export const deleteTable = (id: number) => api.delete(`/tables/${id}`)
 // Orders (Public)
 export const createOrder = (data: { tableId: number; items: { menuItemId: number; quantity: number }[] }) =>
   api.post('/public/orders', data)
+export const getOrderStatus = (orderId: number) =>
+  api.get(`/public/orders/${orderId}`)
 
 // Orders (Admin)
 export const getOrders = (restaurantId: number) =>

@@ -6,6 +6,7 @@ interface Item {
   description?: string
   price: number
   imageUrl?: string
+  available?: boolean
 }
 
 interface Props {
@@ -29,6 +30,7 @@ export default function CategorySection({ categoryId, name, items }: Props) {
             description={item.description}
             price={item.price}
             imageUrl={item.imageUrl}
+            available={item.available}
           />
         ))}
       </div>
