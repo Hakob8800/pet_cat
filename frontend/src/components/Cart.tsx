@@ -36,9 +36,9 @@ export default function Cart({ tableId, onOrderSuccess }: CartProps) {
           quantity: item.quantity,
         })),
       })
+      onOrderSuccess(response.data.orderId, response.data.restaurantId)
       clearCart()
       setIsOpen(false)
-      onOrderSuccess(response.data.orderId, response.data.restaurantId)
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } }
       setError(axiosErr?.response?.data?.message || 'Failed to place order. Please try again.')

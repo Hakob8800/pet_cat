@@ -30,7 +30,9 @@ public class PublicMenuController {
                                     boolean aAvail = Boolean.TRUE.equals(a.getAvailable());
                                     boolean bAvail = Boolean.TRUE.equals(b.getAvailable());
                                     if (aAvail != bAvail) return aAvail ? -1 : 1;
-                                    return 0;
+                                    int posA = a.getPosition() != null ? a.getPosition() : 0;
+                                    int posB = b.getPosition() != null ? b.getPosition() : 0;
+                                    return Integer.compare(posA, posB);
                                 })
                                 .map(item -> new PublicMenuDto.Item(
                                         item.getId(),

@@ -48,7 +48,7 @@ public class OrderService {
                 throw new RuntimeException("Menu item does not belong to this restaurant");
             }
 
-            if (!menuItem.getAvailable()) {
+            if (!Boolean.TRUE.equals(menuItem.getAvailable())) {
                 throw new RuntimeException("Menu item is not available: " + menuItem.getName());
             }
 

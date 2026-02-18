@@ -41,7 +41,11 @@ public class AdminOrderController {
         // Validate ownership
         restaurantService.getOwnedRestaurant(restaurantId, user);
 
-        OrderStatus newStatus = OrderStatus.valueOf(body.get("status"));
+        String statusStr = body.get("status");
+        if (statusStr == null || statusStr.isEmpty()) {
+            throw new IllegalArgumentException("Status is required");
+        }
+        OrderStatus newStatus = OrderStatus.valueOf(statusStr);
         OrderDto updated = orderService.updateOrderStatus(id, newStatus, restaurantId);
         return ResponseEntity.ok(updated);
     }
