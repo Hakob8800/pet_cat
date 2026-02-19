@@ -19,8 +19,8 @@ export default function CategorySection({ categoryId, name, items }: Props) {
   if (items.length === 0) return null
 
   return (
-    <section id={`category-${categoryId}`} className="mb-8 scroll-mt-28">
-      <h2 className="text-xl font-bold mb-4 pb-2 border-b">{name}</h2>
+    <section id={`category-${categoryId}`} className="mb-10 scroll-mt-28">
+      <h2 className="text-lg font-bold text-charcoal mb-4 tracking-tight">{name}</h2>
       <div className="space-y-3">
         {items.map((item) => (
           <MenuItemCard

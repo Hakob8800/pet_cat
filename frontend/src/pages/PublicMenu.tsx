@@ -47,13 +47,13 @@ function getStorageKey(slug: string) {
 
 function SkeletonCard() {
   return (
-    <div className="flex gap-3 p-3 bg-white rounded-xl shadow-sm animate-pulse">
-      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 rounded-xl flex-shrink-0" />
-      <div className="flex-1 space-y-2 py-1">
-        <div className="h-4 bg-gray-200 rounded w-3/4" />
-        <div className="h-3 bg-gray-200 rounded w-full" />
-        <div className="h-3 bg-gray-200 rounded w-1/2" />
-        <div className="h-8 bg-gray-200 rounded-full w-20 mt-2" />
+    <div className="flex gap-4 p-4 bg-white rounded-2xl shadow-warm animate-pulse">
+      <div className="w-24 h-24 bg-surface-warm rounded-xl flex-shrink-0" />
+      <div className="flex-1 space-y-2.5 py-1">
+        <div className="h-4 bg-surface-warm rounded w-3/4" />
+        <div className="h-3 bg-surface-warm rounded w-full" />
+        <div className="h-3 bg-surface-warm rounded w-1/2" />
+        <div className="h-9 bg-surface-warm rounded-full w-20 mt-2" />
       </div>
     </div>
   )
@@ -61,37 +61,37 @@ function SkeletonCard() {
 
 function SkeletonMenu() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-surface">
       {/* Header skeleton */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 py-6 space-y-3 animate-pulse">
-          <div className="h-7 bg-gray-200 rounded w-48 mx-auto" />
-          <div className="h-4 bg-gray-200 rounded w-64 mx-auto" />
+      <header className="bg-white">
+        <div className="max-w-2xl mx-auto px-5 py-8 space-y-3 animate-pulse">
+          <div className="h-7 bg-surface-warm rounded w-48 mx-auto" />
+          <div className="h-4 bg-surface-warm rounded w-64 mx-auto" />
         </div>
       </header>
 
       {/* Tab skeleton */}
-      <div className="sticky top-0 z-20 bg-white border-b">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex gap-2 animate-pulse">
-          <div className="h-8 bg-gray-200 rounded-full w-20 flex-shrink-0" />
-          <div className="h-8 bg-gray-200 rounded-full w-24 flex-shrink-0" />
-          <div className="h-8 bg-gray-200 rounded-full w-16 flex-shrink-0" />
-          <div className="h-8 bg-gray-200 rounded-full w-28 flex-shrink-0" />
+      <div className="sticky top-0 z-20 bg-white border-b border-surface-warm">
+        <div className="max-w-2xl mx-auto px-5 flex gap-6 animate-pulse">
+          <div className="h-5 bg-surface-warm rounded w-16 my-3" />
+          <div className="h-5 bg-surface-warm rounded w-20 my-3" />
+          <div className="h-5 bg-surface-warm rounded w-14 my-3" />
+          <div className="h-5 bg-surface-warm rounded w-24 my-3" />
         </div>
       </div>
 
       {/* Items skeleton */}
-      <main className="max-w-2xl mx-auto px-4 py-6">
-        <div className="mb-8">
-          <div className="h-6 bg-gray-200 rounded w-32 mb-4 animate-pulse" />
+      <main className="max-w-2xl mx-auto px-5 py-8">
+        <div className="mb-10">
+          <div className="h-5 bg-surface-warm rounded w-32 mb-4 animate-pulse" />
           <div className="space-y-3">
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
           </div>
         </div>
-        <div className="mb-8">
-          <div className="h-6 bg-gray-200 rounded w-24 mb-4 animate-pulse" />
+        <div className="mb-10">
+          <div className="h-5 bg-surface-warm rounded w-24 mb-4 animate-pulse" />
           <div className="space-y-3">
             <SkeletonCard />
             <SkeletonCard />
@@ -102,7 +102,7 @@ function SkeletonMenu() {
   )
 }
 
-// --- Category Tabs ---
+// --- Category Tabs (underline style) ---
 
 function CategoryTabs({
   categories,
@@ -142,10 +142,10 @@ function CategoryTabs({
   if (categories.length <= 1) return null
 
   return (
-    <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm border-b">
+    <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm border-b border-surface-warm">
       <div
         ref={tabsRef}
-        className="max-w-2xl mx-auto px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide"
+        className="max-w-2xl mx-auto px-5 flex gap-1 overflow-x-auto scrollbar-hide"
         style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
       >
         {categories.map((cat) => {
@@ -155,13 +155,19 @@ function CategoryTabs({
               key={cat.id}
               ref={isActive ? activeTabRef : undefined}
               onClick={() => handleClick(cat.id)}
-              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex-shrink-0 px-4 py-3 text-sm font-medium transition-all whitespace-nowrap relative ${
                 isActive
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'text-charcoal'
+                  : 'text-charcoal-light/50 hover:text-charcoal-light'
               }`}
             >
               {cat.name}
+              {/* Underline indicator */}
+              <span
+                className={`absolute bottom-0 left-2 right-2 h-0.5 rounded-full transition-all duration-200 ${
+                  isActive ? 'bg-charcoal' : 'bg-transparent'
+                }`}
+              />
             </button>
           )
         })}
@@ -270,11 +276,11 @@ function PublicMenuContent() {
 
   if (error || !menu) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-surface">
         <div className="text-center px-4">
-          <div className="text-5xl mb-4">:/</div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Menu Not Found</h2>
-          <p className="text-gray-500">{error || 'This menu is not available.'}</p>
+          <div className="text-5xl mb-4 text-charcoal-light/30">:/</div>
+          <h2 className="text-xl font-semibold text-charcoal mb-2">Menu Not Found</h2>
+          <p className="text-charcoal-light/60">{error || 'This menu is not available.'}</p>
         </div>
       </div>
     )
@@ -291,16 +297,23 @@ function PublicMenuContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-surface pb-24">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold text-center">{menu.restaurantName}</h1>
+      <header className="bg-white">
+        <div className="max-w-2xl mx-auto px-5 py-8">
+          <h1 className="text-2xl font-bold text-charcoal text-center tracking-tight">
+            {menu.restaurantName}
+          </h1>
           {menu.description && (
-            <p className="text-gray-600 text-center mt-2">{menu.description}</p>
+            <p className="text-charcoal-light/60 text-center mt-2 text-sm">{menu.description}</p>
           )}
           {tableId && (
-            <p className="text-center mt-2 text-sm text-blue-600">Table {tableId}</p>
+            <div className="flex justify-center mt-3">
+              <span className="inline-flex items-center gap-1.5 bg-surface-warm text-charcoal-light text-sm font-medium px-3 py-1 rounded-full">
+                <span className="w-1.5 h-1.5 bg-forest rounded-full" />
+                Table {tableId}
+              </span>
+            </div>
           )}
         </div>
       </header>
@@ -309,7 +322,7 @@ function PublicMenuContent() {
       <CategoryTabs categories={menu.categories} activeCategoryId={activeCategoryId} />
 
       {/* Menu */}
-      <main className="max-w-2xl mx-auto px-4 py-6">
+      <main className="max-w-2xl mx-auto px-5 py-8">
         {menu.categories.map((category) => (
           <CategorySection
             key={category.id}
@@ -320,7 +333,7 @@ function PublicMenuContent() {
         ))}
 
         {menu.categories.length === 0 && (
-          <p className="text-center text-gray-500">No menu items available</p>
+          <p className="text-center text-charcoal-light/50 py-8">No menu items available</p>
         )}
       </main>
 

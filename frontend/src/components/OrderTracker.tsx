@@ -4,12 +4,12 @@ import { useOrderTrackingWebSocket, TrackedOrder } from '../hooks/useOrderTracki
 
 type OrderStatusType = 'NEW' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DONE'
 
-const STEPS: { status: OrderStatusType; label: string }[] = [
-  { status: 'NEW', label: 'Order Placed' },
-  { status: 'CONFIRMED', label: 'Confirmed' },
-  { status: 'PREPARING', label: 'Preparing' },
-  { status: 'READY', label: 'Ready' },
-  { status: 'DONE', label: 'Done' },
+const STEPS: { status: OrderStatusType; label: string; desc: string }[] = [
+  { status: 'NEW', label: 'Order Placed', desc: 'We received your order' },
+  { status: 'CONFIRMED', label: 'Confirmed', desc: 'Kitchen has accepted' },
+  { status: 'PREPARING', label: 'Preparing', desc: 'Your food is being made' },
+  { status: 'READY', label: 'Ready', desc: 'Ready for pickup' },
+  { status: 'DONE', label: 'Complete', desc: 'Enjoy your meal!' },
 ]
 
 function getStepIndex(status: OrderStatusType): number {
@@ -26,6 +26,10 @@ interface OrderTrackerProps {
   orderId: number
   initialItems: OrderedItem[]
   onOrderMore: () => void
+}
+
+function formatPrice(price: number): string {
+  return price % 1 === 0 ? `$${price}` : `$${price.toFixed(2)}`
 }
 
 export default function OrderTracker({ orderId, initialItems, onOrderMore }: OrderTrackerProps) {
@@ -63,35 +67,37 @@ export default function OrderTracker({ orderId, initialItems, onOrderMore }: Ord
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg w-full max-w-sm">
+    <div className="min-h-screen bg-surface flex items-center justify-center p-4">
+      <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-warm-lg w-full max-w-sm animate-scaleIn">
         {/* Header */}
-        <div className="text-center mb-6">
-          <p className="text-gray-500 text-sm">Order #{orderId}</p>
-          <h2 className="text-xl font-bold mt-1">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 bg-surface-warm text-charcoal-light text-sm font-medium px-3 py-1.5 rounded-full mb-3">
+            <span className="w-1.5 h-1.5 bg-bronze rounded-full" />
+            Order #{orderId}
+          </div>
+          <h2 className="text-xl font-bold text-charcoal">
             {status === 'DONE' ? 'Order Complete!' : 'Tracking Your Order'}
           </h2>
         </div>
 
         {/* Stepper */}
-        <div className="space-y-0 mb-6">
+        <div className="mb-8">
           {STEPS.map((step, index) => {
             const isCompleted = index < currentIndex
             const isCurrent = index === currentIndex
-            const isPending = index > currentIndex
+            const isLast = index === STEPS.length - 1
 
             return (
-              <div key={step.status} className="flex items-start gap-3">
-                {/* Connector + Circle */}
+              <div key={step.status} className="flex items-start gap-4">
+                {/* Circle + connector */}
                 <div className="flex flex-col items-center">
-                  {/* Circle */}
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                    className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
                       isCompleted
-                        ? 'bg-green-600 text-white'
+                        ? 'bg-forest text-white'
                         : isCurrent
-                          ? 'bg-green-600 text-white ring-4 ring-green-100'
-                          : 'bg-gray-200 text-gray-400'
+                          ? 'bg-charcoal text-white ring-4 ring-charcoal/10'
+                          : 'bg-surface-warm text-charcoal-light/30'
                     }`}
                   >
                     {isCompleted ? (
@@ -102,30 +108,31 @@ export default function OrderTracker({ orderId, initialItems, onOrderMore }: Ord
                       <span className="text-xs font-bold">{index + 1}</span>
                     )}
                   </div>
-                  {/* Connector line */}
-                  {index < STEPS.length - 1 && (
-                    <div
-                      className={`w-0.5 h-8 transition-colors duration-300 ${
-                        isCompleted ? 'bg-green-600' : 'bg-gray-200'
-                      }`}
-                    />
+                  {!isLast && (
+                    <div className="w-0.5 h-10 relative bg-surface-warm overflow-hidden">
+                      {isCompleted && (
+                        <div className="absolute inset-0 bg-forest animate-fillLine" />
+                      )}
+                    </div>
                   )}
                 </div>
 
                 {/* Label */}
-                <div className={`pt-1 ${isPending ? 'opacity-40' : ''}`}>
-                  <p
-                    className={`text-sm font-medium ${
-                      isCurrent ? 'text-green-700' : isCompleted ? 'text-gray-700' : 'text-gray-400'
-                    }`}
-                  >
+                <div className={`pt-1.5 pb-5 transition-opacity duration-300 ${
+                  !isCompleted && !isCurrent ? 'opacity-30' : ''
+                }`}>
+                  <p className={`text-sm font-semibold ${
+                    isCurrent ? 'text-charcoal' : isCompleted ? 'text-charcoal-light' : 'text-charcoal-light/50'
+                  }`}>
                     {step.label}
                   </p>
-                  {isCurrent && status !== 'DONE' && (
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-xs text-green-600">In progress</span>
+                  {isCurrent && status !== 'DONE' ? (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="w-1.5 h-1.5 bg-bronze rounded-full animate-pulse" />
+                      <span className="text-xs text-bronze font-medium">{step.desc}</span>
                     </div>
+                  ) : (isCompleted || (isCurrent && status === 'DONE')) && (
+                    <p className="text-xs text-charcoal-light/50 mt-0.5">{step.desc}</p>
                   )}
                 </div>
               </div>
@@ -135,19 +142,20 @@ export default function OrderTracker({ orderId, initialItems, onOrderMore }: Ord
 
         {/* Order summary */}
         {items.length > 0 && (
-          <div className="border-t pt-4 space-y-2">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Your order</h3>
+          <div className="border-t border-surface-warm pt-5 space-y-2.5">
+            <h3 className="text-xs font-semibold text-charcoal-light/50 uppercase tracking-wider">Your order</h3>
             {items.map((item, i) => (
               <div key={i} className="flex justify-between text-sm">
-                <span className="text-gray-700">
-                  {item.quantity}x {item.name}
+                <span className="text-charcoal">
+                  <span className="text-charcoal-light/50">{item.quantity}x</span>{' '}
+                  {item.name}
                 </span>
-                <span className="text-gray-500">${(item.price * item.quantity).toFixed(2)}</span>
+                <span className="text-bronze font-medium">{formatPrice(item.price * item.quantity)}</span>
               </div>
             ))}
-            <div className="flex justify-between font-semibold pt-2 border-t">
-              <span>Total</span>
-              <span>${total.toFixed(2)}</span>
+            <div className="flex justify-between font-semibold pt-3 border-t border-surface-warm">
+              <span className="text-charcoal-light">Total</span>
+              <span className="text-charcoal">{formatPrice(total)}</span>
             </div>
           </div>
         )}
@@ -155,7 +163,7 @@ export default function OrderTracker({ orderId, initialItems, onOrderMore }: Ord
         {/* Order More button */}
         <button
           onClick={onOrderMore}
-          className="w-full mt-6 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 active:scale-[0.98] transition-all"
+          className="w-full mt-6 bg-charcoal text-white py-3.5 rounded-2xl font-semibold hover:bg-charcoal-light active:scale-[0.98] transition-all"
         >
           Order More
         </button>
