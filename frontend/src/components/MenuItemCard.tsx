@@ -19,56 +19,52 @@ export default function MenuItemCard({ id, name, description, price, imageUrl, a
   const quantity = cartItem?.quantity ?? 0
 
   return (
-    <div
-      className={`flex gap-4 p-4 bg-white rounded-2xl shadow-warm transition-all duration-200${
-        !available ? ' opacity-40' : ' hover:shadow-warm-lg'
-      }`}
-    >
+    <div className={`flex gap-3 p-3 bg-white rounded-xl shadow-sm${!available ? ' opacity-50 grayscale' : ''}`}>
       {imageUrl && (
         <img
           src={imageUrl}
           alt={name}
-          className="w-24 h-24 object-cover rounded-xl flex-shrink-0"
+          className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl flex-shrink-0"
         />
       )}
       <div className="flex-1 min-w-0 flex flex-col">
         <div className="flex justify-between items-start gap-2">
-          <div className="min-w-0">
-            <h3 className="font-semibold text-[15px] text-charcoal leading-tight">{name}</h3>
+          <div className="flex items-center gap-2 min-w-0">
+            <h3 className="font-semibold text-base leading-tight">{name}</h3>
             {!available && (
-              <span className="inline-block mt-1 text-xs text-charcoal-light/70 font-medium">
+              <span className="flex-shrink-0 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
                 Unavailable
               </span>
             )}
           </div>
-          <span className="text-[15px] font-bold text-bronze whitespace-nowrap">
+          <span className="text-base font-bold text-green-600 whitespace-nowrap">
             {formatPrice(price)}
           </span>
         </div>
         {description && (
-          <p className="text-charcoal-light/60 mt-1.5 text-[13px] leading-relaxed line-clamp-2">{description}</p>
+          <p className="text-gray-500 mt-1 text-sm leading-snug line-clamp-2">{description}</p>
         )}
         {available && (
-          <div className="mt-auto pt-3">
+          <div className="mt-auto pt-2">
             {quantity === 0 ? (
               <button
                 onClick={() => addItem({ id, name, price })}
-                className="h-9 bg-charcoal text-white px-5 rounded-full text-sm font-medium hover:bg-charcoal-light active:scale-95 transition-all"
+                className="h-9 min-w-[44px] bg-green-600 text-white px-4 rounded-full text-sm font-medium hover:bg-green-700 active:scale-95 transition-all"
               >
-                Add
+                + Add
               </button>
             ) : (
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => updateQuantity(id, quantity - 1)}
-                  className="w-9 h-9 min-w-[44px] min-h-[44px] rounded-full bg-surface-warm hover:bg-bronze/10 active:bg-bronze/20 flex items-center justify-center text-lg font-medium text-charcoal transition-colors"
+                  className="w-9 h-9 min-w-[44px] min-h-[44px] rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 flex items-center justify-center text-lg font-medium transition-colors"
                 >
                   -
                 </button>
-                <span className="w-8 text-center font-semibold text-[15px] text-charcoal">{quantity}</span>
+                <span className="w-8 text-center font-semibold text-base">{quantity}</span>
                 <button
                   onClick={() => updateQuantity(id, quantity + 1)}
-                  className="w-9 h-9 min-w-[44px] min-h-[44px] rounded-full bg-charcoal hover:bg-charcoal-light text-white flex items-center justify-center text-lg font-medium transition-colors"
+                  className="w-9 h-9 min-w-[44px] min-h-[44px] rounded-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white flex items-center justify-center text-lg font-medium transition-colors"
                 >
                   +
                 </button>
