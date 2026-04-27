@@ -3,6 +3,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/qrmenu
     username: qrmenu
     password: qrmenu123
+  flyway:
+    enabled: false  # Flyway runs in prod only (application-prod.yml)
+
   jpa:
     hibernate:
       ddl-auto: update

@@ -1,0 +1,70 @@
+name: qrmenu-dev
+
+# One-command full dev stack: docker compose -f docker-compose.dev.yml up --build
+# Backend hot-reload: edit files in backend/src, then restart the backend service.
+# Frontend HMR works automatically via volume mounts.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: qrmenu-db-dev
+    environment:
+      POSTGRES_DB: qrmenu
+      POSTGRES_USER: qrmenu
+      POSTGRES_PASSWORD: qrmenu123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qrmenu"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: qrmenu-backend-dev
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/qrmenu
+      SPRING_DATASOURCE_USERNAME: qrmenu
+      SPRING_DATASOURCE_PASSWORD: qrmenu123
+      # 64+ char dev secret — never use in production
+      JWT_SECRET: dev-only-secret-key-minimum-64-characters-long-do-not-use-in-production-ever
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+    volumes:
+      - ./backend/src:/app/src
+      - maven_cache:/root/.m2
+      - uploads_dev:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: qrmenu-frontend-dev
+    ports:
+      - "5173:5173"
+    environment:
+      # Vite proxies /api to this target inside the Docker network
+      API_PROXY_TARGET: http://backend:8080
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/postcss.config.js:/app/postcss.config.js
+    depends_on:
+      - backend
+
+volumes:
+  postgres_dev:
+  maven_cache:
+  uploads_dev:
