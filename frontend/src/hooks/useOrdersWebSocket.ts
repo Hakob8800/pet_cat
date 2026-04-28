@@ -18,16 +18,24 @@ interface Order {
   items: OrderItem[]
 }
 
+interface WaiterCall {
+  tableId: number
+  tableNumber: number
+  restaurantId: number
+  calledAt: string
+}
+
 interface UseOrdersWebSocketOptions {
   restaurantId: number
   onOrderUpdate: (order: Order) => void
+  onWaiterCall?: (call: WaiterCall) => void
 }
 
 function getWsUrl() {
   return `${window.location.protocol === 'https:' ? 'https:' : 'http:'}//${window.location.host}/ws`
 }
 
-export function useOrdersWebSocket({ restaurantId, onOrderUpdate }: UseOrdersWebSocketOptions) {
+export function useOrdersWebSocket({ restaurantId, onOrderUpdate, onWaiterCall }: UseOrdersWebSocketOptions) {
   const clientRef = useRef<Client | null>(null)
 
   const connect = useCallback(() => {
@@ -42,6 +50,10 @@ export function useOrdersWebSocket({ restaurantId, onOrderUpdate }: UseOrdersWeb
           const order: Order = JSON.parse(message.body)
           onOrderUpdate(order)
         })
+        client.subscribe(`/topic/restaurants/${restaurantId}/waiter-calls`, (message) => {
+          const call: WaiterCall = JSON.parse(message.body)
+          onWaiterCall?.(call)
+        })
       },
       onDisconnect: () => {
         console.log('WebSocket disconnected')
@@ -53,7 +65,7 @@ export function useOrdersWebSocket({ restaurantId, onOrderUpdate }: UseOrdersWeb
 
     client.activate()
     clientRef.current = client
-  }, [restaurantId, onOrderUpdate])
+  }, [restaurantId, onOrderUpdate, onWaiterCall])
 
   const disconnect = useCallback(() => {
     if (clientRef.current) {

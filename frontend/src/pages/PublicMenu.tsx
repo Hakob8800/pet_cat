@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { getPublicMenu } from '../api/client'
+import { getPublicMenu, callWaiter } from '../api/client'
 import CategorySection from '../components/CategorySection'
 import Cart from '../components/Cart'
 import OrderTracker from '../components/OrderTracker'
@@ -182,6 +182,8 @@ function PublicMenuContent() {
   const [error, setError] = useState('')
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null)
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null)
+  const [waiterCooldown, setWaiterCooldown] = useState(0)
+  const [waiterCalled, setWaiterCalled] = useState(false)
   const { items: cartItems, clearCart } = useCart()
 
   // Restore active order from localStorage on mount
@@ -256,6 +258,23 @@ function PublicMenuContent() {
     }
   }, [cartItems, slug])
 
+  const handleCallWaiter = useCallback(async () => {
+    if (!tableId || waiterCooldown > 0) return
+    try {
+      await callWaiter(tableId)
+      setWaiterCalled(true)
+      setWaiterCooldown(60)
+      const interval = setInterval(() => {
+        setWaiterCooldown((prev) => {
+          if (prev <= 1) { clearInterval(interval); return 0 }
+          return prev - 1
+        })
+      }, 1000)
+    } catch {
+      // silently ignore — waiter call is best-effort
+    }
+  }, [tableId, waiterCooldown])
+
   const handleOrderMore = useCallback(() => {
     setActiveOrder(null)
     clearCart()
@@ -300,7 +319,23 @@ function PublicMenuContent() {
             <p className="text-gray-600 text-center mt-2">{menu.description}</p>
           )}
           {tableId && (
-            <p className="text-center mt-2 text-sm text-blue-600">Table {tableId}</p>
+            <div className="flex flex-col items-center gap-2 mt-2">
+              <p className="text-sm text-blue-600">Table {tableId}</p>
+              <button
+                onClick={handleCallWaiter}
+                disabled={waiterCooldown > 0}
+                className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  waiterCalled && waiterCooldown > 0
+                    ? 'bg-amber-100 text-amber-700 cursor-not-allowed'
+                    : 'bg-amber-500 text-white hover:bg-amber-600 active:scale-95'
+                }`}
+              >
+                <span>🔔</span>
+                {waiterCooldown > 0
+                  ? `Waiter notified (${waiterCooldown}s)`
+                  : 'Call Waiter'}
+              </button>
+            </div>
           )}
         </div>
       </header>

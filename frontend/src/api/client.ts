@@ -98,4 +98,8 @@ export const updateOrderStatus = (orderId: number, status: string, restaurantId:
 export const getAnalytics = (restaurantId: number, days: 7 | 30 = 7) =>
   api.get(`/admin/analytics?restaurantId=${restaurantId}&days=${days}`)
 
+// Waiter call (Public)
+export const callWaiter = (tableId: number) =>
+  api.post(`/public/tables/${tableId}/call-waiter`)
+
 export default api
