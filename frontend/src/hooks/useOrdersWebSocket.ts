@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 
@@ -37,8 +37,14 @@ function getWsUrl() {
 
 export function useOrdersWebSocket({ restaurantId, onOrderUpdate, onWaiterCall }: UseOrdersWebSocketOptions) {
   const clientRef = useRef<Client | null>(null)
+  const onOrderUpdateRef = useRef(onOrderUpdate)
+  const onWaiterCallRef = useRef(onWaiterCall)
 
-  const connect = useCallback(() => {
+  // Keep refs current without triggering reconnects
+  onOrderUpdateRef.current = onOrderUpdate
+  onWaiterCallRef.current = onWaiterCall
+
+  useEffect(() => {
     const client = new Client({
       webSocketFactory: () => new SockJS(getWsUrl()),
       reconnectDelay: 5000,
@@ -48,11 +54,11 @@ export function useOrdersWebSocket({ restaurantId, onOrderUpdate, onWaiterCall }
         console.log('WebSocket connected')
         client.subscribe(`/topic/restaurants/${restaurantId}/orders`, (message) => {
           const order: Order = JSON.parse(message.body)
-          onOrderUpdate(order)
+          onOrderUpdateRef.current(order)
         })
         client.subscribe(`/topic/restaurants/${restaurantId}/waiter-calls`, (message) => {
           const call: WaiterCall = JSON.parse(message.body)
-          onWaiterCall?.(call)
+          onWaiterCallRef.current?.(call)
         })
       },
       onDisconnect: () => {
@@ -65,19 +71,12 @@ export function useOrdersWebSocket({ restaurantId, onOrderUpdate, onWaiterCall }
 
     client.activate()
     clientRef.current = client
-  }, [restaurantId, onOrderUpdate, onWaiterCall])
 
-  const disconnect = useCallback(() => {
-    if (clientRef.current) {
-      clientRef.current.deactivate()
+    return () => {
+      client.deactivate()
       clientRef.current = null
     }
-  }, [])
+  }, [restaurantId]) // only reconnect when restaurantId changes
 
-  useEffect(() => {
-    connect()
-    return () => disconnect()
-  }, [connect, disconnect])
-
-  return { disconnect }
+  return { disconnect: () => { clientRef.current?.deactivate(); clientRef.current = null } }
 }
