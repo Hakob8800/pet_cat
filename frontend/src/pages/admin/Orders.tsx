@@ -45,13 +45,6 @@ const NEXT_STATUS: Record<string, OrderStatusType> = {
   READY: 'DONE',
 }
 
-interface WaiterCall {
-  tableId: number
-  tableNumber: number
-  calledAt: string
-  uid: number
-}
-
 export default function Orders() {
   const { id: restaurantId } = useParams()
   const [orders, setOrders] = useState<Order[]>([])
@@ -59,14 +52,12 @@ export default function Orders() {
   const [error, setError] = useState('')
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null)
   const [showSettings, setShowSettings] = useState(false)
-  const [waiterCalls, setWaiterCalls] = useState<WaiterCall[]>([])
   const originalTitle = useRef(document.title)
 
   const {
     permission,
     soundEnabled,
     requestPermission,
-    showNotification,
     toggleSound,
     playTestSound,
   } = useNotifications()
@@ -109,50 +100,26 @@ export default function Orders() {
     }
   }, [restaurantId, updatePageTitle])
 
-  // WebSocket handler for real-time updates
+  // WebSocket handler for real-time updates — only manages order list state,
+  // toasts/notifications are handled globally by AdminNotifications
   const handleOrderUpdate = useCallback((updatedOrder: Order) => {
     setOrders((prev) => {
       const exists = prev.find((o) => o.id === updatedOrder.id)
       if (exists) {
-        // Update existing order
         const updated = prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
-        const activeCount = updated.filter((o) => o.status !== 'DONE').length
-        updatePageTitle(activeCount)
+        updatePageTitle(updated.filter((o) => o.status !== 'DONE').length)
         return updated
       }
-      // New order - add to beginning and notify
-      if (updatedOrder.status === 'NEW') {
-        const itemCount = updatedOrder.items.reduce((sum, item) => sum + item.quantity, 0)
-        showNotification(
-          `New Order - Table ${updatedOrder.tableNumber}`,
-          `${itemCount} item${itemCount > 1 ? 's' : ''} ordered`
-        )
-      }
       const updated = [updatedOrder, ...prev]
-      const activeCount = updated.filter((o) => o.status !== 'DONE').length
-      updatePageTitle(activeCount)
+      updatePageTitle(updated.filter((o) => o.status !== 'DONE').length)
       return updated
     })
-  }, [showNotification, updatePageTitle])
+  }, [updatePageTitle])
 
-  const handleWaiterCall = useCallback((call: { tableId: number; tableNumber: number; calledAt: string }) => {
-    const uid = Date.now()
-    setWaiterCalls((prev) => [...prev, { ...call, uid }])
-    showNotification(`Waiter requested — Table ${call.tableNumber}`, 'A guest needs assistance')
-    setTimeout(() => {
-      setWaiterCalls((prev) => prev.filter((c) => c.uid !== uid))
-    }, 30000)
-  }, [showNotification])
-
-  const dismissWaiterCall = useCallback((uid: number) => {
-    setWaiterCalls((prev) => prev.filter((c) => c.uid !== uid))
-  }, [])
-
-  // Connect to WebSocket for real-time updates
+  // Connect to WebSocket for real-time order list updates
   useOrdersWebSocket({
     restaurantId: Number(restaurantId),
     onOrderUpdate: handleOrderUpdate,
-    onWaiterCall: handleWaiterCall,
   })
 
   useEffect(() => {
@@ -292,36 +259,6 @@ export default function Orders() {
       <main className="max-w-4xl mx-auto px-4 py-6">
         {error && (
           <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>
-        )}
-
-        {/* Waiter call alerts */}
-        {waiterCalls.length > 0 && (
-          <div className="mb-6 space-y-2">
-            {waiterCalls.map((call) => (
-              <div
-                key={call.uid}
-                className="flex items-center justify-between bg-amber-50 border border-amber-400 rounded-lg px-4 py-3 shadow-sm animate-pulse-once"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🔔</span>
-                  <div>
-                    <p className="font-semibold text-amber-900">
-                      Waiter requested — Table {call.tableNumber}
-                    </p>
-                    <p className="text-xs text-amber-700">
-                      {new Date(call.calledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => dismissWaiterCall(call.uid)}
-                  className="text-amber-600 hover:text-amber-900 font-medium text-sm px-3 py-1 rounded hover:bg-amber-100 transition-colors"
-                >
-                  Dismiss
-                </button>
-              </div>
-            ))}
-          </div>
         )}
 
         {/* Active Orders */}
