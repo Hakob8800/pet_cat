@@ -43,6 +43,10 @@ function getStorageKey(slug: string) {
   return `qrmenu_active_order_${slug}`
 }
 
+function getWaiterCooldownKey(tableId: number) {
+  return `qrmenu_waiter_cooldown_${tableId}`
+}
+
 // --- Skeleton components ---
 
 function SkeletonCard() {
@@ -182,8 +186,12 @@ function PublicMenuContent() {
   const [error, setError] = useState('')
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null)
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null)
-  const [waiterCooldown, setWaiterCooldown] = useState(0)
-  const [waiterCalled, setWaiterCalled] = useState(false)
+  const [waiterCooldown, setWaiterCooldown] = useState<number>(() => {
+    if (!tableId) return 0
+    const end = Number(localStorage.getItem(getWaiterCooldownKey(tableId)) ?? 0)
+    return Math.max(0, Math.ceil((end - Date.now()) / 1000))
+  })
+  const waiterCalled = waiterCooldown > 0
   const { items: cartItems, clearCart } = useCart()
 
   // Restore active order from localStorage on mount
@@ -258,18 +266,28 @@ function PublicMenuContent() {
     }
   }, [cartItems, slug])
 
+  // Countdown tick — each second schedules the next
+  useEffect(() => {
+    if (waiterCooldown <= 0) return
+    const timer = setTimeout(() => {
+      setWaiterCooldown((prev) => {
+        const next = prev - 1
+        if (next <= 0 && tableId) {
+          localStorage.removeItem(getWaiterCooldownKey(tableId))
+        }
+        return next
+      })
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [waiterCooldown, tableId])
+
   const handleCallWaiter = useCallback(async () => {
     if (!tableId || waiterCooldown > 0) return
     try {
       await callWaiter(tableId)
-      setWaiterCalled(true)
+      const endTime = Date.now() + 60_000
+      localStorage.setItem(getWaiterCooldownKey(tableId), String(endTime))
       setWaiterCooldown(60)
-      const interval = setInterval(() => {
-        setWaiterCooldown((prev) => {
-          if (prev <= 1) { clearInterval(interval); return 0 }
-          return prev - 1
-        })
-      }, 1000)
     } catch {
       // silently ignore — waiter call is best-effort
     }
@@ -331,7 +349,7 @@ function PublicMenuContent() {
                 }`}
               >
                 <span>🔔</span>
-                {waiterCooldown > 0
+                {waiterCalled
                   ? `Waiter notified (${waiterCooldown}s)`
                   : 'Call Waiter'}
               </button>
