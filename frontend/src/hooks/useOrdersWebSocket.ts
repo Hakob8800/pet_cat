@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 
@@ -18,19 +18,33 @@ interface Order {
   items: OrderItem[]
 }
 
+interface WaiterCall {
+  tableId: number
+  tableNumber: number
+  restaurantId: number
+  calledAt: string
+}
+
 interface UseOrdersWebSocketOptions {
   restaurantId: number
   onOrderUpdate: (order: Order) => void
+  onWaiterCall?: (call: WaiterCall) => void
 }
 
 function getWsUrl() {
   return `${window.location.protocol === 'https:' ? 'https:' : 'http:'}//${window.location.host}/ws`
 }
 
-export function useOrdersWebSocket({ restaurantId, onOrderUpdate }: UseOrdersWebSocketOptions) {
+export function useOrdersWebSocket({ restaurantId, onOrderUpdate, onWaiterCall }: UseOrdersWebSocketOptions) {
   const clientRef = useRef<Client | null>(null)
+  const onOrderUpdateRef = useRef(onOrderUpdate)
+  const onWaiterCallRef = useRef(onWaiterCall)
 
-  const connect = useCallback(() => {
+  // Keep refs current without triggering reconnects
+  onOrderUpdateRef.current = onOrderUpdate
+  onWaiterCallRef.current = onWaiterCall
+
+  useEffect(() => {
     const client = new Client({
       webSocketFactory: () => new SockJS(getWsUrl()),
       reconnectDelay: 5000,
@@ -40,7 +54,11 @@ export function useOrdersWebSocket({ restaurantId, onOrderUpdate }: UseOrdersWeb
         console.log('WebSocket connected')
         client.subscribe(`/topic/restaurants/${restaurantId}/orders`, (message) => {
           const order: Order = JSON.parse(message.body)
-          onOrderUpdate(order)
+          onOrderUpdateRef.current(order)
+        })
+        client.subscribe(`/topic/restaurants/${restaurantId}/waiter-calls`, (message) => {
+          const call: WaiterCall = JSON.parse(message.body)
+          onWaiterCallRef.current?.(call)
         })
       },
       onDisconnect: () => {
@@ -53,19 +71,12 @@ export function useOrdersWebSocket({ restaurantId, onOrderUpdate }: UseOrdersWeb
 
     client.activate()
     clientRef.current = client
-  }, [restaurantId, onOrderUpdate])
 
-  const disconnect = useCallback(() => {
-    if (clientRef.current) {
-      clientRef.current.deactivate()
+    return () => {
+      client.deactivate()
       clientRef.current = null
     }
-  }, [])
+  }, [restaurantId]) // only reconnect when restaurantId changes
 
-  useEffect(() => {
-    connect()
-    return () => disconnect()
-  }, [connect, disconnect])
-
-  return { disconnect }
+  return { disconnect: () => { clientRef.current?.deactivate(); clientRef.current = null } }
 }
