@@ -7,6 +7,7 @@ import Dashboard from './pages/admin/Dashboard'
 import RestaurantEdit from './pages/admin/RestaurantEdit'
 import MenuEdit from './pages/admin/MenuEdit'
 import Orders from './pages/admin/Orders'
+import Analytics from './pages/admin/Analytics'
 import AdminNotifications from './components/AdminNotifications'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,7 @@ export default function App() {
       <Route path="/admin/restaurant/:id" element={<ProtectedRoute><RestaurantEdit /></ProtectedRoute>} />
       <Route path="/admin/restaurant/:id/menu" element={<ProtectedRoute><MenuEdit /></ProtectedRoute>} />
       <Route path="/admin/restaurant/:id/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+      <Route path="/admin/restaurant/:id/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
 
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/admin" replace />} />

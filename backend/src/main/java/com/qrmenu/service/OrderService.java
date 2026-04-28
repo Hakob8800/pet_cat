@@ -55,6 +55,7 @@ public class OrderService {
             OrderItem orderItem = new OrderItem();
             orderItem.setMenuItem(menuItem);
             orderItem.setQuantity(itemRequest.quantity());
+            orderItem.setPriceAtOrder(menuItem.getPrice());
             order.addItem(orderItem);
         }
 
