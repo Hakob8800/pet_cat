@@ -210,6 +210,12 @@ export default function Dashboard() {
                 </div>
                 <div className="flex gap-2">
                   <Link
+                    to={`/admin/restaurant/${r.id}/analytics`}
+                    className="text-indigo-600 hover:underline"
+                  >
+                    Analytics
+                  </Link>
+                  <Link
                     to={`/admin/restaurant/${r.id}/orders`}
                     className="text-orange-600 hover:underline"
                   >

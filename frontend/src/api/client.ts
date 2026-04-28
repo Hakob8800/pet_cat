@@ -94,4 +94,8 @@ export const getOrders = (restaurantId: number) =>
 export const updateOrderStatus = (orderId: number, status: string, restaurantId: number) =>
   api.put(`/admin/orders/${orderId}/status?restaurantId=${restaurantId}`, { status })
 
+// Analytics
+export const getAnalytics = (restaurantId: number, days: 7 | 30 = 7) =>
+  api.get(`/admin/analytics?restaurantId=${restaurantId}&days=${days}`)
+
 export default api
