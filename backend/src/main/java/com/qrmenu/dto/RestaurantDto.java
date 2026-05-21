@@ -8,5 +8,6 @@ public record RestaurantDto(
         @NotBlank String name,
         @NotBlank @Pattern(regexp = "^[a-z0-9-]+$", message = "Slug must contain only lowercase letters, numbers and hyphens")
         String slug,
-        String description
+        String description,
+        @jakarta.validation.constraints.Size(max = 5) String currency
 ) {}

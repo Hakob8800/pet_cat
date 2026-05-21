@@ -23,6 +23,13 @@ public class RestaurantController {
         return ResponseEntity.ok(restaurantService.getByUser(user));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<RestaurantDto> get(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(restaurantService.getById(id, user));
+    }
+
     @PostMapping
     public ResponseEntity<RestaurantDto> create(
             @Valid @RequestBody RestaurantDto dto,

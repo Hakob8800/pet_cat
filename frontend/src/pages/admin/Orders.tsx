@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getOrders, updateOrderStatus } from '../../api/client'
+import { getOrders, updateOrderStatus, getRestaurant, patchItemAvailability } from '../../api/client'
 import { getErrorMessage } from '../../lib/utils'
 import { useOrdersWebSocket } from '../../hooks/useOrdersWebSocket'
 import { useNotifications } from '../../hooks/useNotifications'
@@ -21,6 +21,7 @@ interface Order {
   status: OrderStatusType
   createdAt: string
   items: OrderItem[]
+  notes?: string
 }
 
 const STATUS_CONFIG: Record<OrderStatusType, { label: string; color: string; border: string; bg: string }> = {
@@ -52,6 +53,8 @@ export default function Orders() {
   const [error, setError] = useState('')
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [currency, setCurrency] = useState('$')
+  const [disabledItems, setDisabledItems] = useState<Set<number>>(new Set())
   const originalTitle = useRef(document.title)
 
   const {
@@ -89,9 +92,13 @@ export default function Orders() {
     if (!restaurantId) return
     try {
       setError('')
-      const res = await getOrders(Number(restaurantId))
-      setOrders(res.data)
-      const activeCount = res.data.filter((o: Order) => o.status !== 'DONE').length
+      const [ordersRes, restaurantRes] = await Promise.all([
+        getOrders(Number(restaurantId)),
+        getRestaurant(Number(restaurantId)),
+      ])
+      setOrders(ordersRes.data)
+      if (restaurantRes.data.currency) setCurrency(restaurantRes.data.currency)
+      const activeCount = ordersRes.data.filter((o: Order) => o.status !== 'DONE').length
       updatePageTitle(activeCount)
     } catch (err) {
       setError(getErrorMessage(err))
@@ -138,6 +145,16 @@ export default function Orders() {
       setError(getErrorMessage(err))
     } finally {
       setUpdatingOrderId(null)
+    }
+  }
+
+  const handle86Item = async (menuItemId: number, menuItemName: string) => {
+    if (!confirm(`Mark "${menuItemName}" as unavailable?`)) return
+    try {
+      await patchItemAvailability(menuItemId, false)
+      setDisabledItems((prev) => new Set(prev).add(menuItemId))
+    } catch {
+      // ignore
     }
   }
 
@@ -295,21 +312,39 @@ export default function Orders() {
 
                     <div className="border-t pt-3 mb-3">
                       {order.items.map((item) => (
-                        <div key={item.id} className="flex justify-between py-1">
-                          <span>
+                        <div key={item.id} className="flex justify-between items-center py-1 gap-2">
+                          <span className={disabledItems.has(item.menuItemId) ? 'line-through text-gray-400' : ''}>
                             <span className="font-medium">{item.quantity}x</span>{' '}
                             {item.menuItemName}
                           </span>
-                          <span className="text-gray-600">
-                            ${(item.price * item.quantity).toFixed(2)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600">
+                              {currency}{(item.price * item.quantity).toFixed(2)}
+                            </span>
+                            {!disabledItems.has(item.menuItemId) && (
+                              <button
+                                onClick={() => handle86Item(item.menuItemId, item.menuItemName)}
+                                title="Mark as unavailable (86)"
+                                className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600 hover:bg-red-200 font-bold leading-none"
+                              >
+                                86
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
 
+                    {order.notes && (
+                      <div className="border-t pt-2 mb-2">
+                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Note</p>
+                        <p className="text-sm text-gray-700 italic">"{order.notes}"</p>
+                      </div>
+                    )}
+
                     <div className="flex justify-between items-center border-t pt-3">
                       <div className="font-bold">
-                        Total: $
+                        Total: {currency}
                         {order.items
                           .reduce((sum, item) => sum + item.price * item.quantity, 0)
                           .toFixed(2)}

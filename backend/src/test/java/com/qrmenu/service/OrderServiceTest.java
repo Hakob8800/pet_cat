@@ -79,7 +79,8 @@ class OrderServiceTest {
     void createOrder_Success() {
         CreateOrderRequest request = new CreateOrderRequest(
                 1L,
-                List.of(new CreateOrderRequest.OrderItemRequest(1L, 2))
+                List.of(new CreateOrderRequest.OrderItemRequest(1L, 2)),
+                null
         );
 
         when(tableRepository.findById(1L)).thenReturn(Optional.of(table));
@@ -114,7 +115,8 @@ class OrderServiceTest {
     void createOrder_TableNotFound_ThrowsException() {
         CreateOrderRequest request = new CreateOrderRequest(
                 999L,
-                List.of(new CreateOrderRequest.OrderItemRequest(1L, 2))
+                List.of(new CreateOrderRequest.OrderItemRequest(1L, 2)),
+                null
         );
 
         when(tableRepository.findById(999L)).thenReturn(Optional.empty());
@@ -129,7 +131,8 @@ class OrderServiceTest {
         table.setIsActive(false);
         CreateOrderRequest request = new CreateOrderRequest(
                 1L,
-                List.of(new CreateOrderRequest.OrderItemRequest(1L, 2))
+                List.of(new CreateOrderRequest.OrderItemRequest(1L, 2)),
+                null
         );
 
         when(tableRepository.findById(1L)).thenReturn(Optional.of(table));
@@ -143,7 +146,8 @@ class OrderServiceTest {
     void createOrder_MenuItemNotFound_ThrowsException() {
         CreateOrderRequest request = new CreateOrderRequest(
                 1L,
-                List.of(new CreateOrderRequest.OrderItemRequest(999L, 2))
+                List.of(new CreateOrderRequest.OrderItemRequest(999L, 2)),
+                null
         );
 
         when(tableRepository.findById(1L)).thenReturn(Optional.of(table));
@@ -159,7 +163,8 @@ class OrderServiceTest {
         menuItem.setAvailable(false);
         CreateOrderRequest request = new CreateOrderRequest(
                 1L,
-                List.of(new CreateOrderRequest.OrderItemRequest(1L, 2))
+                List.of(new CreateOrderRequest.OrderItemRequest(1L, 2)),
+                null
         );
 
         when(tableRepository.findById(1L)).thenReturn(Optional.of(table));

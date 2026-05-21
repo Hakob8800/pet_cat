@@ -13,7 +13,10 @@ public record CreateOrderRequest(
 
         @NotEmpty(message = "Order must have at least one item")
         @Valid
-        List<OrderItemRequest> items
+        List<OrderItemRequest> items,
+
+        @jakarta.validation.constraints.Size(max = 500, message = "Notes must be at most 500 characters")
+        String notes
 ) {
     public record OrderItemRequest(
             @NotNull(message = "Menu item ID is required")

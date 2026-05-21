@@ -25,10 +25,11 @@ interface OrderedItem {
 interface OrderTrackerProps {
   orderId: number
   initialItems: OrderedItem[]
+  currency?: string
   onOrderMore: () => void
 }
 
-export default function OrderTracker({ orderId, initialItems, onOrderMore }: OrderTrackerProps) {
+export default function OrderTracker({ orderId, initialItems, currency = '$', onOrderMore }: OrderTrackerProps) {
   const [status, setStatus] = useState<OrderStatusType>('NEW')
   const [items, setItems] = useState<OrderedItem[]>(initialItems)
 
@@ -142,12 +143,12 @@ export default function OrderTracker({ orderId, initialItems, onOrderMore }: Ord
                 <span className="text-gray-700">
                   {item.quantity}x {item.name}
                 </span>
-                <span className="text-gray-500">${(item.price * item.quantity).toFixed(2)}</span>
+                <span className="text-gray-500">{currency}{(item.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
             <div className="flex justify-between font-semibold pt-2 border-t">
               <span>Total</span>
-              <span>${total.toFixed(2)}</span>
+              <span>{currency}{total.toFixed(2)}</span>
             </div>
           </div>
         )}

@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import PublicMenu from './pages/PublicMenu'
 import Dashboard from './pages/admin/Dashboard'
 import RestaurantEdit from './pages/admin/RestaurantEdit'
@@ -24,6 +26,8 @@ export default function App() {
       <Route path="/menu/:slug" element={<PublicMenu />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Protected admin routes */}
       <Route path="/admin" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

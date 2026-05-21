@@ -60,6 +60,9 @@ public class OrderService {
         }
 
         // 4. Save
+        if (request.notes() != null && !request.notes().isBlank()) {
+            order.setNotes(request.notes().trim());
+        }
         order = orderRepository.save(order);
 
         // 5. Broadcast via WebSocket
@@ -140,7 +143,8 @@ public class OrderService {
                 order.getTable().getNumber(),
                 order.getStatus(),
                 order.getCreatedAt(),
-                itemDtos
+                itemDtos,
+                order.getNotes()
         );
     }
 }

@@ -56,7 +56,7 @@ class RestaurantControllerIntegrationTest {
 
     @Test
     void createRestaurant_Success() throws Exception {
-        RestaurantDto dto = new RestaurantDto(null, "My Restaurant", "my-restaurant", "Great food");
+        RestaurantDto dto = new RestaurantDto(null, "My Restaurant", "my-restaurant", "Great food", null);
 
         mockMvc.perform(post("/api/restaurants")
                         .header("Authorization", "Bearer " + authToken)
@@ -73,14 +73,14 @@ class RestaurantControllerIntegrationTest {
 
     @Test
     void createRestaurant_DuplicateSlug_Returns409() throws Exception {
-        RestaurantDto dto1 = new RestaurantDto(null, "Restaurant 1", "same-slug", "Desc 1");
+        RestaurantDto dto1 = new RestaurantDto(null, "Restaurant 1", "same-slug", "Desc 1", null);
         mockMvc.perform(post("/api/restaurants")
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto1)))
                 .andExpect(status().isOk());
 
-        RestaurantDto dto2 = new RestaurantDto(null, "Restaurant 2", "same-slug", "Desc 2");
+        RestaurantDto dto2 = new RestaurantDto(null, "Restaurant 2", "same-slug", "Desc 2", null);
         mockMvc.perform(post("/api/restaurants")
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -91,7 +91,7 @@ class RestaurantControllerIntegrationTest {
 
     @Test
     void createRestaurant_Unauthorized_Returns403() throws Exception {
-        RestaurantDto dto = new RestaurantDto(null, "My Restaurant", "my-restaurant", "Great food");
+        RestaurantDto dto = new RestaurantDto(null, "My Restaurant", "my-restaurant", "Great food", null);
 
         mockMvc.perform(post("/api/restaurants")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -102,8 +102,8 @@ class RestaurantControllerIntegrationTest {
     @Test
     void listRestaurants_Success() throws Exception {
         // Create restaurants
-        RestaurantDto dto1 = new RestaurantDto(null, "Restaurant 1", "rest-1", "Desc 1");
-        RestaurantDto dto2 = new RestaurantDto(null, "Restaurant 2", "rest-2", "Desc 2");
+        RestaurantDto dto1 = new RestaurantDto(null, "Restaurant 1", "rest-1", "Desc 1", null);
+        RestaurantDto dto2 = new RestaurantDto(null, "Restaurant 2", "rest-2", "Desc 2", null);
 
         mockMvc.perform(post("/api/restaurants")
                         .header("Authorization", "Bearer " + authToken)
@@ -128,7 +128,7 @@ class RestaurantControllerIntegrationTest {
     @Test
     void updateRestaurant_Success() throws Exception {
         // Create restaurant
-        RestaurantDto createDto = new RestaurantDto(null, "Original Name", "original-slug", "Original Desc");
+        RestaurantDto createDto = new RestaurantDto(null, "Original Name", "original-slug", "Original Desc", null);
         MvcResult result = mockMvc.perform(post("/api/restaurants")
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -139,7 +139,7 @@ class RestaurantControllerIntegrationTest {
         Long restaurantId = objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
 
         // Update restaurant
-        RestaurantDto updateDto = new RestaurantDto(null, "Updated Name", "updated-slug", "Updated Desc");
+        RestaurantDto updateDto = new RestaurantDto(null, "Updated Name", "updated-slug", "Updated Desc", null);
         mockMvc.perform(put("/api/restaurants/" + restaurantId)
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -152,7 +152,7 @@ class RestaurantControllerIntegrationTest {
     @Test
     void deleteRestaurant_Success() throws Exception {
         // Create restaurant
-        RestaurantDto dto = new RestaurantDto(null, "To Delete", "to-delete", "Will be deleted");
+        RestaurantDto dto = new RestaurantDto(null, "To Delete", "to-delete", "Will be deleted", null);
         MvcResult result = mockMvc.perform(post("/api/restaurants")
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -173,7 +173,7 @@ class RestaurantControllerIntegrationTest {
     @Test
     void updateRestaurant_NotOwner_Returns403() throws Exception {
         // Create restaurant with first user
-        RestaurantDto dto = new RestaurantDto(null, "Restaurant", "rest-slug", "Desc");
+        RestaurantDto dto = new RestaurantDto(null, "Restaurant", "rest-slug", "Desc", null);
         MvcResult result = mockMvc.perform(post("/api/restaurants")
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -194,7 +194,7 @@ class RestaurantControllerIntegrationTest {
         String otherToken = objectMapper.readTree(otherResult.getResponse().getContentAsString()).get("token").asText();
 
         // Try to update restaurant with other user
-        RestaurantDto updateDto = new RestaurantDto(null, "Hacked", "hacked", "Hacked");
+        RestaurantDto updateDto = new RestaurantDto(null, "Hacked", "hacked", "Hacked", null);
         mockMvc.perform(put("/api/restaurants/" + restaurantId)
                         .header("Authorization", "Bearer " + otherToken)
                         .contentType(MediaType.APPLICATION_JSON)

@@ -49,6 +49,7 @@ public class PublicMenuController {
         return ResponseEntity.ok(new PublicMenuDto(
                 restaurant.getName(),
                 restaurant.getDescription(),
+                restaurant.getCurrency() != null ? restaurant.getCurrency() : "$",
                 categories
         ));
     }

@@ -31,6 +31,7 @@ export default function RestaurantEdit() {
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RestaurantFormData>({
     resolver: zodResolver(restaurantSchema),
@@ -62,6 +63,7 @@ export default function RestaurantEdit() {
             name: restaurant.name,
             slug: restaurant.slug,
             description: restaurant.description || '',
+            currency: restaurant.currency || '$',
           })
         }
 
@@ -95,6 +97,7 @@ export default function RestaurantEdit() {
         name: data.name,
         slug: data.slug,
         description: data.description || '',
+        currency: data.currency || '$',
       })
       navigate('/admin')
     } catch (err) {
@@ -139,8 +142,8 @@ export default function RestaurantEdit() {
     }
   }
 
-  const getTableUrl = (tableId: number) => {
-    return `${window.location.origin}/menu/${slug}?table=${tableId}`
+  const getTableUrl = (table: Table) => {
+    return `${window.location.origin}/menu/${slug}?table=${table.id}&tableNum=${table.number}`
   }
 
   if (loading) {
@@ -199,6 +202,30 @@ export default function RestaurantEdit() {
                 }`}
                 rows={3}
               />
+            </FormField>
+
+            <FormField label="Currency symbol" error={errors.currency} hint="Symbol shown on menu and orders (e.g. $, €, £, ₽)">
+              <div className="flex gap-2 flex-wrap items-center">
+                <input
+                  type="text"
+                  {...register('currency')}
+                  maxLength={5}
+                  className={`w-24 p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.currency ? 'border-red-500' : ''
+                  }`}
+                  placeholder="$"
+                />
+                {['$', '€', '£', '₽', '֏', '₴'].map((sym) => (
+                  <button
+                    key={sym}
+                    type="button"
+                    onClick={() => setValue('currency', sym)}
+                    className="px-3 py-1.5 border rounded hover:bg-gray-100 text-sm font-medium"
+                  >
+                    {sym}
+                  </button>
+                ))}
+              </div>
             </FormField>
           </div>
 
@@ -296,9 +323,9 @@ export default function RestaurantEdit() {
                   {selectedTableQR === table.id && (
                     <div className="mt-2 p-4 bg-white border rounded-lg flex flex-col items-center">
                       <p className="text-sm font-medium mb-2">Table {table.number} QR Code</p>
-                      <QRCodeSVG value={getTableUrl(table.id)} size={180} />
+                      <QRCodeSVG value={getTableUrl(table)} size={180} />
                       <p className="mt-2 text-xs text-gray-500 break-all text-center max-w-[200px]">
-                        {getTableUrl(table.id)}
+                        {getTableUrl(table)}
                       </p>
                       <button
                         onClick={() => {

@@ -19,6 +19,7 @@ export const restaurantSchema = z.object({
     .max(50, 'Slug too long')
     .regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers and hyphens'),
   description: z.string().max(500, 'Description too long').optional(),
+  currency: z.string().max(5, 'Currency symbol too long').optional(),
 })
 
 export const categorySchema = z.object({

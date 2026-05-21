@@ -75,7 +75,7 @@ class OrderIntegrationTest {
         authToken = objectMapper.readTree(responseBody).get("token").asText();
 
         // Create restaurant
-        RestaurantDto restaurantDto = new RestaurantDto(null, "Test Restaurant", "test-rest", "Description");
+        RestaurantDto restaurantDto = new RestaurantDto(null, "Test Restaurant", "test-rest", "Description", null);
         result = mockMvc.perform(post("/api/restaurants")
                         .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -122,7 +122,8 @@ class OrderIntegrationTest {
     void createOrder_Success() throws Exception {
         CreateOrderRequest request = new CreateOrderRequest(
                 table.getId(),
-                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 2))
+                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 2)),
+                null
         );
 
         mockMvc.perform(post("/api/public/orders")
@@ -142,7 +143,8 @@ class OrderIntegrationTest {
     void createOrder_InvalidTable_Returns404() throws Exception {
         CreateOrderRequest request = new CreateOrderRequest(
                 999L,
-                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 2))
+                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 2)),
+                null
         );
 
         mockMvc.perform(post("/api/public/orders")
@@ -157,7 +159,8 @@ class OrderIntegrationTest {
         // Create an order first
         CreateOrderRequest request = new CreateOrderRequest(
                 table.getId(),
-                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 1))
+                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 1)),
+                null
         );
 
         mockMvc.perform(post("/api/public/orders")
@@ -188,7 +191,8 @@ class OrderIntegrationTest {
         // Create an order first
         CreateOrderRequest createRequest = new CreateOrderRequest(
                 table.getId(),
-                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 1))
+                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 1)),
+                null
         );
 
         MvcResult result = mockMvc.perform(post("/api/public/orders")
@@ -222,7 +226,8 @@ class OrderIntegrationTest {
         // Create an order first
         CreateOrderRequest createRequest = new CreateOrderRequest(
                 table.getId(),
-                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 1))
+                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 1)),
+                null
         );
 
         MvcResult result = mockMvc.perform(post("/api/public/orders")
@@ -249,7 +254,8 @@ class OrderIntegrationTest {
         // Create an order first
         CreateOrderRequest createRequest = new CreateOrderRequest(
                 table.getId(),
-                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 1))
+                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 1)),
+                null
         );
 
         MvcResult result = mockMvc.perform(post("/api/public/orders")
@@ -278,7 +284,8 @@ class OrderIntegrationTest {
 
         CreateOrderRequest request = new CreateOrderRequest(
                 table.getId(),
-                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 2))
+                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 2)),
+                null
         );
 
         mockMvc.perform(post("/api/public/orders")
@@ -296,7 +303,8 @@ class OrderIntegrationTest {
 
         CreateOrderRequest request = new CreateOrderRequest(
                 table.getId(),
-                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 2))
+                List.of(new CreateOrderRequest.OrderItemRequest(menuItem.getId(), 2)),
+                null
         );
 
         mockMvc.perform(post("/api/public/orders")

@@ -10,5 +10,6 @@ public record OrderDto(
         Integer tableNumber,
         OrderStatus status,
         LocalDateTime createdAt,
-        List<OrderItemDto> items
+        List<OrderItemDto> items,
+        String notes
 ) {}

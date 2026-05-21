@@ -30,6 +30,7 @@ public class RestaurantService {
         restaurant.setName(dto.name());
         restaurant.setSlug(dto.slug());
         restaurant.setDescription(dto.description());
+        restaurant.setCurrency(dto.currency() != null && !dto.currency().isBlank() ? dto.currency() : "$");
         restaurant.setUser(user);
 
         return toDto(restaurantRepository.save(restaurant));
@@ -46,6 +47,7 @@ public class RestaurantService {
         restaurant.setName(dto.name());
         restaurant.setSlug(dto.slug());
         restaurant.setDescription(dto.description());
+        restaurant.setCurrency(dto.currency() != null && !dto.currency().isBlank() ? dto.currency() : "$");
 
         return toDto(restaurantRepository.save(restaurant));
     }
@@ -53,6 +55,10 @@ public class RestaurantService {
     public void delete(Long id, User user) {
         Restaurant restaurant = getOwnedRestaurant(id, user);
         restaurantRepository.delete(restaurant);
+    }
+
+    public RestaurantDto getById(Long id, User user) {
+        return toDto(getOwnedRestaurant(id, user));
     }
 
     public Restaurant getOwnedRestaurant(Long id, User user) {
@@ -67,6 +73,6 @@ public class RestaurantService {
     }
 
     private RestaurantDto toDto(Restaurant r) {
-        return new RestaurantDto(r.getId(), r.getName(), r.getSlug(), r.getDescription());
+        return new RestaurantDto(r.getId(), r.getName(), r.getSlug(), r.getDescription(), r.getCurrency());
     }
 }

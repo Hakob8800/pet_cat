@@ -71,6 +71,20 @@ public class MenuItemController {
         return ResponseEntity.ok(toDto(menuItemRepository.save(item)));
     }
 
+    @PatchMapping("/api/items/{id}/available")
+    public ResponseEntity<MenuItemDto> patchAvailable(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Boolean> body,
+            @AuthenticationPrincipal User user) {
+        MenuItem item = getOwnedItem(id, user);
+        Boolean available = body.get("available");
+        if (available != null) {
+            item.setAvailable(available);
+            menuItemRepository.save(item);
+        }
+        return ResponseEntity.ok(toDto(item));
+    }
+
     @DeleteMapping("/api/items/{id}")
     public ResponseEntity<Void> delete(
             @PathVariable Long id,

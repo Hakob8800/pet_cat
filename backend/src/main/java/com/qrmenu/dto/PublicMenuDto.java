@@ -6,6 +6,7 @@ import java.util.List;
 public record PublicMenuDto(
         String restaurantName,
         String description,
+        String currency,
         List<CategoryWithItems> categories
 ) {
     public record CategoryWithItems(

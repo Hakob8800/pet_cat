@@ -27,6 +27,9 @@ public class Restaurant {
 
     private String description;
 
+    @Column(nullable = false, length = 5)
+    private String currency = "$";
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @ManyToOne(fetch = FetchType.LAZY)

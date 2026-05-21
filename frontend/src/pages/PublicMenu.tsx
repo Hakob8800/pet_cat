@@ -24,6 +24,7 @@ interface Category {
 interface Menu {
   restaurantName: string
   description?: string
+  currency: string
   categories: Category[]
 }
 
@@ -180,12 +181,14 @@ function PublicMenuContent() {
   const { slug } = useParams()
   const [searchParams] = useSearchParams()
   const tableId = searchParams.get('table') ? Number(searchParams.get('table')) : null
+  const tableNum = searchParams.get('tableNum') ? Number(searchParams.get('tableNum')) : tableId
 
   const [menu, setMenu] = useState<Menu | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null)
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [waiterCooldown, setWaiterCooldown] = useState<number>(() => {
     if (!tableId) return 0
     const end = Number(localStorage.getItem(getWaiterCooldownKey(tableId)) ?? 0)
@@ -322,6 +325,7 @@ function PublicMenuContent() {
       <OrderTracker
         orderId={activeOrder.orderId}
         initialItems={activeOrder.items}
+        currency={menu?.currency ?? '$'}
         onOrderMore={handleOrderMore}
       />
     )
@@ -338,7 +342,7 @@ function PublicMenuContent() {
           )}
           {tableId && (
             <div className="flex flex-col items-center gap-2 mt-2">
-              <p className="text-sm text-blue-600">Table {tableId}</p>
+              <p className="text-sm text-blue-600">Table {tableNum}</p>
               <button
                 onClick={handleCallWaiter}
                 disabled={waiterCooldown > 0}
@@ -358,27 +362,78 @@ function PublicMenuContent() {
         </div>
       </header>
 
+      {/* Search */}
+      <div className="bg-white border-b">
+        <div className="max-w-2xl mx-auto px-4 py-2">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search dishes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm border rounded-full bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                &times;
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Category tabs */}
-      <CategoryTabs categories={menu.categories} activeCategoryId={activeCategoryId} />
+      {!searchQuery && <CategoryTabs categories={menu.categories} activeCategoryId={activeCategoryId} />}
 
       {/* Menu */}
       <main className="max-w-2xl mx-auto px-4 py-6">
-        {menu.categories.map((category) => (
-          <CategorySection
-            key={category.id}
-            categoryId={category.id}
-            name={category.name}
-            items={category.items}
-          />
-        ))}
-
-        {menu.categories.length === 0 && (
-          <p className="text-center text-gray-500">No menu items available</p>
+        {searchQuery ? (
+          (() => {
+            const q = searchQuery.toLowerCase()
+            const results = menu.categories.flatMap((cat) =>
+              cat.items.filter(
+                (item) =>
+                  item.name.toLowerCase().includes(q) ||
+                  (item.description?.toLowerCase().includes(q) ?? false)
+              )
+            )
+            if (results.length === 0) {
+              return <p className="text-center text-gray-500 py-8">No dishes found for "{searchQuery}"</p>
+            }
+            return (
+              <CategorySection
+                key="search-results"
+                categoryId={0}
+                name={`Results (${results.length})`}
+                items={results}
+              />
+            )
+          })()
+        ) : (
+          <>
+            {menu.categories.map((category) => (
+              <CategorySection
+                key={category.id}
+                categoryId={category.id}
+                name={category.name}
+                items={category.items}
+              />
+            ))}
+            {menu.categories.length === 0 && (
+              <p className="text-center text-gray-500">No menu items available</p>
+            )}
+          </>
         )}
       </main>
 
       {/* Cart */}
-      <Cart tableId={tableId} onOrderSuccess={handleOrderSuccess} />
+      <Cart tableId={tableId} tableNum={tableNum} currency={menu.currency} onOrderSuccess={handleOrderSuccess} />
     </div>
   )
 }

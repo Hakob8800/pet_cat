@@ -4,18 +4,21 @@ import { createOrder } from '../api/client'
 
 interface CartProps {
   tableId: number | null
+  tableNum?: number | null
+  currency?: string
   onOrderSuccess: (orderId: number, restaurantId: number) => void
 }
 
-function formatPrice(price: number): string {
-  return price % 1 === 0 ? `$${price}` : `$${price.toFixed(2)}`
+function formatPrice(price: number, currency: string): string {
+  return price % 1 === 0 ? `${currency}${price}` : `${currency}${price.toFixed(2)}`
 }
 
-export default function Cart({ tableId, onOrderSuccess }: CartProps) {
+export default function Cart({ tableId, tableNum, currency = '$', onOrderSuccess }: CartProps) {
   const { items, totalItems, totalPrice, updateQuantity, removeItem, clearCart } = useCart()
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [notes, setNotes] = useState('')
 
   if (totalItems === 0) return null
 
@@ -35,9 +38,11 @@ export default function Cart({ tableId, onOrderSuccess }: CartProps) {
           menuItemId: item.id,
           quantity: item.quantity,
         })),
+        notes: notes.trim() || undefined,
       })
       onOrderSuccess(response.data.orderId, response.data.restaurantId)
       clearCart()
+      setNotes('')
       setIsOpen(false)
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } }
@@ -62,7 +67,7 @@ export default function Cart({ tableId, onOrderSuccess }: CartProps) {
               </span>
               <span className="font-semibold text-gray-900">View Order</span>
             </div>
-            <span className="font-bold text-green-600 text-lg">{formatPrice(totalPrice)}</span>
+            <span className="font-bold text-green-600 text-lg">{formatPrice(totalPrice, currency)}</span>
           </button>
         </div>
       </div>
@@ -89,7 +94,7 @@ export default function Cart({ tableId, onOrderSuccess }: CartProps) {
             {tableId && (
               <div className="px-4 pt-3">
                 <div className="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium">
-                  Table {tableId}
+                  Table {tableNum ?? tableId}
                 </div>
               </div>
             )}
@@ -100,7 +105,7 @@ export default function Cart({ tableId, onOrderSuccess }: CartProps) {
                 <div key={item.id} className="flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{item.name}</div>
-                    <div className="text-sm text-gray-500">{formatPrice(item.price)}</div>
+                    <div className="text-sm text-gray-500">{formatPrice(item.price, currency)}</div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
@@ -129,6 +134,19 @@ export default function Cart({ tableId, onOrderSuccess }: CartProps) {
               ))}
             </div>
 
+            {/* Special instructions */}
+            <div className="px-4 pb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Special instructions</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                maxLength={500}
+                rows={2}
+                placeholder="E.g. no onions, extra sauce..."
+                className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+              />
+            </div>
+
             {!tableId && (
               <div className="px-4 pb-2">
                 <div className="bg-yellow-50 text-yellow-700 px-3 py-2 rounded-lg text-sm">
@@ -147,7 +165,7 @@ export default function Cart({ tableId, onOrderSuccess }: CartProps) {
             <div className="sticky bottom-0 bg-white border-t p-4">
               <div className="flex justify-between mb-3">
                 <span className="font-semibold">Total:</span>
-                <span className="font-bold text-lg">{formatPrice(totalPrice)}</span>
+                <span className="font-bold text-lg">{formatPrice(totalPrice, currency)}</span>
               </div>
               <button
                 onClick={handleSubmit}

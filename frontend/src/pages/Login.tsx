@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '../context/AuthContext'
@@ -10,6 +10,8 @@ export default function Login() {
   const [error, setError] = useState('')
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const successMessage = (location.state as { message?: string } | null)?.message
 
   const {
     register,
@@ -33,6 +35,10 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
+
+        {successMessage && (
+          <div className="bg-green-100 text-green-700 p-3 rounded mb-4 text-sm">{successMessage}</div>
+        )}
 
         {error && (
           <div className="bg-red-100 text-red-700 p-3 rounded mb-4">{error}</div>
@@ -58,6 +64,12 @@ export default function Login() {
               }`}
             />
           </FormField>
+
+          <div className="text-right -mt-2">
+            <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
 
           <button
             type="submit"

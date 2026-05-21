@@ -78,6 +78,12 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Email -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Flyway DB migrations (enabled in prod profile only) -->
         <!-- Spring Boot 3.2 manages Flyway 9.x; PostgreSQL support is built into flyway-core -->
         <dependency>

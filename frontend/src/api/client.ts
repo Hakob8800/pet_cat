@@ -20,11 +20,18 @@ export const register = (email: string, password: string, name: string) =>
 export const login = (email: string, password: string) =>
   api.post('/auth/login', { email, password })
 
+export const forgotPassword = (email: string) =>
+  api.post('/auth/forgot-password', { email })
+
+export const resetPassword = (token: string, newPassword: string) =>
+  api.post('/auth/reset-password', { token, newPassword })
+
 // Restaurants
 export const getRestaurants = () => api.get('/restaurants')
-export const createRestaurant = (data: { name: string; slug: string; description?: string }) =>
+export const getRestaurant = (id: number) => api.get(`/restaurants/${id}`)
+export const createRestaurant = (data: { name: string; slug: string; description?: string; currency?: string }) =>
   api.post('/restaurants', data)
-export const updateRestaurant = (id: number, data: { name: string; slug: string; description?: string }) =>
+export const updateRestaurant = (id: number, data: { name: string; slug: string; description?: string; currency?: string }) =>
   api.put(`/restaurants/${id}`, data)
 export const deleteRestaurant = (id: number) => api.delete(`/restaurants/${id}`)
 
@@ -47,6 +54,8 @@ export const updateItem = (id: number, data: {
   name: string; description?: string; price: number; imageUrl?: string; available?: boolean; position?: number
 }) => api.put(`/items/${id}`, data)
 export const deleteItem = (id: number) => api.delete(`/items/${id}`)
+export const patchItemAvailability = (id: number, available: boolean) =>
+  api.patch(`/items/${id}/available`, { available })
 
 // Public Menu
 export const getPublicMenu = (slug: string) => api.get(`/menu/${slug}`)
@@ -83,7 +92,7 @@ export const updateTable = (id: number, data: { number?: number; isActive?: bool
 export const deleteTable = (id: number) => api.delete(`/tables/${id}`)
 
 // Orders (Public)
-export const createOrder = (data: { tableId: number; items: { menuItemId: number; quantity: number }[] }) =>
+export const createOrder = (data: { tableId: number; items: { menuItemId: number; quantity: number }[]; notes?: string }) =>
   api.post('/public/orders', data)
 export const getOrderStatus = (orderId: number) =>
   api.get(`/public/orders/${orderId}`)

@@ -18,9 +18,23 @@ spring:
       max-file-size: 5MB
       max-request-size: 5MB
 
+  # Email — uncomment and fill in to enable real password-reset emails.
+  # Without this block, reset URLs are logged to the console (useful for dev/testing).
+  # mail:
+  #   host: smtp.gmail.com
+  #   port: 587
+  #   username: your-email@gmail.com
+  #   password: your-app-password
+  #   properties:
+  #     mail.smtp.auth: true
+  #     mail.smtp.starttls.enable: true
+
 jwt:
   secret: your-256-bit-secret-key-here-make-it-long-enough-for-hs256
   expiration: 86400000  # 24 hours in milliseconds
+
+app:
+  base-url: ${APP_BASE_URL:http://localhost:5173}
 
 file:
   upload-dir: ./uploads

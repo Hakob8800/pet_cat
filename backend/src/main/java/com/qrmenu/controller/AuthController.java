@@ -1,8 +1,10 @@
 package com.qrmenu.controller;
 
 import com.qrmenu.dto.AuthResponse;
+import com.qrmenu.dto.ForgotPasswordRequest;
 import com.qrmenu.dto.LoginRequest;
 import com.qrmenu.dto.RegisterRequest;
+import com.qrmenu.dto.ResetPasswordRequest;
 import com.qrmenu.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,5 +26,17 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok().build();
     }
 }

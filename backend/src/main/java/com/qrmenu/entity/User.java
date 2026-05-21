@@ -30,6 +30,11 @@ public class User {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(unique = true)
+    private String resetToken;
+
+    private LocalDateTime resetTokenExpiry;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Restaurant> restaurants = new ArrayList<>();
 }
